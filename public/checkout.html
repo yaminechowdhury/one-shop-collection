@@ -6,40 +6,95 @@
     <title>Checkout | One Shop Collection</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="style.css">
-    <style>.brand-logo { max-width: 180px; height: auto; }</style>
+    <style>
+        body { background-color: #1a1a1a; color: #fff; font-family: 'Segoe UI', sans-serif; }
+        .checkout-container { max-width: 600px; margin: 40px auto; padding: 25px; background: #242424; border-radius: 8px; border: 1px solid #333; }
+        .form-group { margin-bottom: 18px; }
+        .form-group label { display: block; margin-bottom: 8px; color: #ffb400; font-weight: bold; font-size: 0.9rem; }
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%; padding: 12px; background: #1a1a1a; border: 1px solid #333; color: #fff; border-radius: 4px; outline: none; box-sizing: border-box;
+        }
+        .order-summary { background: #1a1a1a; padding: 18px; border-radius: 6px; border: 1px solid #333; margin-top: 20px; }
+        .summary-row { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 0.95rem; color: #aaa; }
+        .summary-row.total { color: #ffb400; font-size: 1.2rem; font-weight: bold; border-top: 1px solid #333; padding-top: 10px; margin-top: 10px; }
+        .btn-place-order { width: 100%; padding: 14px; background: transparent; border: 1px solid #ffb400; color: #ffb400; font-weight: bold; font-size: 1rem; border-radius: 4px; cursor: pointer; margin-top: 20px; transition: 0.3s; }
+        .btn-place-order:hover { background: #ffb400; color: #000; }
+    </style>
 </head>
 <body>
 
-    <header class="main-header">
-        <a href="index.html"><img src="logo.png" alt="Logo" class="brand-logo"></a>
-    </header>
-
-    <nav class="navbar">
-        <ul class="nav-menu">
-            <li><a href="index.html"><i class="fa-solid fa-house"></i> HOME</a></li>
-            <li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
-            <li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
-            <li><a href="cart.html"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
-            <li><a href="checkout.html" class="active"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
-            <li><a href="account.html"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
-        </ul>
-    </nav>
-
-    <div class="main-container">
-        <h2 class="section-title">CHECKOUT</h2>
-        <form style="background: #2a2a2a; padding: 30px; border-radius: 4px; max-width: 600px; margin: auto; display: flex; flex-direction: column; gap: 15px;">
-            <label style="color: #ffb400;">Full Name *</label>
-            <input type="text" placeholder="Enter full name" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+    <div class="checkout-container">
+        <h2 style="color: #ffb400; margin-bottom: 25px; border-bottom: 1px solid #333; padding-bottom: 10px;">CHECKOUT</h2>
+        
+        <form id="checkoutForm" onsubmit="handlePlaceOrder(event)">
+            <div class="form-group">
+                <label>Full Name *</label>
+                <input type="text" placeholder="Enter full name" required>
+            </div>
             
-            <label style="color: #ffb400;">Phone Number *</label>
-            <input type="text" placeholder="017XXXXXXXX" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+            <div class="form-group">
+                <label>Phone Number *</label>
+                <input type="text" placeholder="017XXXXXXXX" required>
+            </div>
             
-            <label style="color: #ffb400;">Full Address *</label>
-            <textarea placeholder="Address details..." style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required></textarea>
+            <div class="form-group">
+                <label>Full Address *</label>
+                <textarea rows="3" placeholder="Address details..." required></textarea>
+            </div>
 
-            <button type="submit" class="add-to-cart-btn" style="margin-top: 10px;">PLACE ORDER</button>
+            <!-- Delivery Location Selection -->
+            <div class="form-group">
+                <label>Delivery Location *</label>
+                <select id="deliveryArea" onchange="calculateTotal()" required>
+                    <option value="" disabled selected>Select Delivery Location</option>
+                    <option value="80">Inside Dhaka (৳ 80 Charge)</option>
+                    <option value="150">Outside Dhaka (৳ 150 Charge)</option>
+                </select>
+            </div>
+
+            <!-- Price Calculations -->
+            <div class="order-summary">
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="subtotal-val">৳ 0</span>
+                </div>
+                <div class="summary-row">
+                    <span>Delivery Charge:</span>
+                    <span id="delivery-val">৳ 0</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Grand Total:</span>
+                    <span id="grand-total-val">৳ 0</span>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-place-order">PLACE ORDER</button>
         </form>
     </div>
 
+    <script>
+        // LocalStorage বা Cart থেকে পাওয়া সাবটোটাল
+        let cartItems = JSON.parse(localStorage.getItem('cart_items')) || [];
+        let cartSubtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0) || 1000; // ডিফল্ট ১০০০ টাকার টেস্ট ডাটা রাখা
+
+        function calculateTotal() {
+            const areaSelect = document.getElementById('deliveryArea');
+            const deliveryCharge = Number(areaSelect.value) || 0;
+            const grandTotal = cartSubtotal + deliveryCharge;
+
+            document.getElementById('subtotal-val').innerText = `৳ ${cartSubtotal.toLocaleString()}`;
+            document.getElementById('delivery-val').innerText = `৳ ${deliveryCharge.toLocaleString()}`;
+            document.getElementById('grand-total-val').innerText = `৳ ${grandTotal.toLocaleString()}`;
+        }
+
+        function handlePlaceOrder(e) {
+            e.preventDefault();
+            alert("Order Placed Successfully!");
+            localStorage.removeItem('cart_items');
+            window.location.href = "index.html";
+        }
+
+        calculateTotal();
+    </script>
 </body>
 </html>

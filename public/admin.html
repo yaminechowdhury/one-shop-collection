@@ -34,6 +34,43 @@
             min-height: 100vh;
         }
 
+        /* --- Login Overlay Security --- */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(15, 15, 15, 0.95);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .login-card {
+            background: var(--bg-card);
+            border: 1px solid var(--accent-gold);
+            padding: 35px;
+            border-radius: 10px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(255, 180, 0, 0.2);
+        }
+
+        .login-card i {
+            font-size: 2.5rem;
+            color: var(--accent-gold);
+            margin-bottom: 15px;
+        }
+
+        .login-card h2 {
+            margin-bottom: 20px;
+            color: var(--text-main);
+        }
+
         /* --- Sidebar --- */
         .sidebar {
             width: 250px;
@@ -289,6 +326,19 @@
             outline: none;
         }
 
+        /* --- Size Badge Styling --- */
+        .size-badge {
+            display: inline-block;
+            background: #333;
+            color: var(--accent-gold);
+            padding: 2px 7px;
+            border-radius: 3px;
+            font-size: 0.8rem;
+            margin: 2px;
+            border: 1px solid #444;
+            font-weight: 600;
+        }
+
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
         @media (max-width: 768px) {
@@ -299,6 +349,20 @@
     </style>
 </head>
 <body>
+
+    <!-- 0. ADMIN LOGIN OVERLAY -->
+    <div id="login-overlay">
+        <div class="login-card">
+            <i class="fa-solid fa-lock"></i>
+            <h2>Admin Login</h2>
+            <form onsubmit="handleAdminLogin(event)">
+                <div class="form-group">
+                    <input type="password" id="adminPasswordInput" placeholder="Enter Admin Password" required style="text-align: center; font-size: 1rem;">
+                </div>
+                <button type="submit" class="btn-add" style="width: 100%; justify-content: center;">Unlock Panel</button>
+            </form>
+        </div>
+    </div>
 
     <!-- Sidebar Navigation -->
     <aside class="sidebar" id="sidebar">
@@ -313,7 +377,7 @@
             <li><a onclick="switchTab('customers')" id="nav-customers"><i class="fa-solid fa-users"></i> Customers</a></li>
             <li><a onclick="switchTab('analytics')" id="nav-analytics"><i class="fa-solid fa-chart-pie"></i> Analytics</a></li>
             <li><a onclick="switchTab('settings')" id="nav-settings"><i class="fa-solid fa-gear"></i> Settings</a></li>
-            <li style="margin-top: auto;"><a href="index.html" style="color: #ff4d4d;"><i class="fa-solid fa-right-from-bracket"></i> Exit Store</a></li>
+            <li style="margin-top: auto;"><a onclick="logoutAdmin()" style="color: #ff4d4d;"><i class="fa-solid fa-right-from-bracket"></i> Lock Panel</a></li>
         </ul>
     </aside>
 
@@ -365,6 +429,7 @@
                         <tr>
                             <th>Image</th>
                             <th>Product Name</th>
+                            <th>Available Sizes</th>
                             <th>Details</th>
                             <th>Price</th>
                             <th>Stock</th>
@@ -440,7 +505,11 @@
                     <label>Contact Phone</label>
                     <input type="text" value="+8801760893895">
                 </div>
-                <button class="btn-add">Save Changes</button>
+                <div class="form-group">
+                    <label>Admin Security Password</label>
+                    <input type="password" id="changeAdminPass" placeholder="New Password">
+                </div>
+                <button class="btn-add" onclick="saveAdminSettings()">Save Changes</button>
             </div>
         </main>
     </div>
@@ -454,6 +523,13 @@
                     <label>Product Title *</label>
                     <input type="text" id="prodTitle" placeholder="e.g. Slim Fit Denim Shirt" required>
                 </div>
+                
+                <!-- Blank Custom Size Input Field -->
+                <div class="form-group">
+                    <label>Available Sizes (কমা দিয়ে আলাদা লিখুন)</label>
+                    <input type="text" id="prodSizes" placeholder="e.g. 40, 42, 44  অথবা  M, L, XL">
+                </div>
+
                 <div class="form-group">
                     <label>Product Details / Description</label>
                     <textarea id="prodDetails" rows="3" placeholder="Fabric, Size guide, Details..."></textarea>
@@ -479,12 +555,49 @@
     </div>
 
     <script>
+        // Password Security Initial Setup
+        let currentAdminPass = localStorage.getItem('admin_password') || 'admin123';
+        
+        function handleAdminLogin(e) {
+            e.preventDefault();
+            const inputPass = document.getElementById('adminPasswordInput').value;
+            if (inputPass === currentAdminPass) {
+                document.getElementById('login-overlay').style.display = 'none';
+                sessionStorage.setItem('admin_logged_in', 'true');
+            } else {
+                alert("Incorrect Password! Access Denied.");
+            }
+        }
+
+        function checkLoginState() {
+            if (sessionStorage.getItem('admin_logged_in') === 'true') {
+                document.getElementById('login-overlay').style.display = 'none';
+            }
+        }
+
+        function logoutAdmin() {
+            sessionStorage.removeItem('admin_logged_in');
+            document.getElementById('login-overlay').style.display = 'flex';
+        }
+
+        function saveAdminSettings() {
+            const newPass = document.getElementById('changeAdminPass').value;
+            if(newPass.trim() !== "") {
+                localStorage.setItem('admin_password', newPass);
+                currentAdminPass = newPass;
+                alert("Settings & Password Updated Successfully!");
+                document.getElementById('changeAdminPass').value = '';
+            } else {
+                alert("Settings Saved!");
+            }
+        }
+
         // Fetch Data from localStorage or empty arrays
         let products = JSON.parse(localStorage.getItem('admin_products')) || [];
         let orders = JSON.parse(localStorage.getItem('admin_orders')) || [];
         let customers = JSON.parse(localStorage.getItem('admin_customers')) || [];
 
-        // Analytics Default Data (Zeroed out)
+        // Analytics Default Data
         let analyticsSales = JSON.parse(localStorage.getItem('admin_analytics_sales')) || [0, 0, 0, 0, 0, 0, 0];
         let analyticsOrders = JSON.parse(localStorage.getItem('admin_analytics_orders')) || [0, 0, 0, 0, 0, 0, 0];
         let salesChartInstance = null;
@@ -515,13 +628,18 @@
             tbody.innerHTML = '';
 
             if (products.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; color:#aaa;">No products found!</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa;">No products found!</td></tr>`;
             } else {
                 products.forEach((p, index) => {
+                    const sizesHTML = p.sizes && p.sizes.length > 0 
+                        ? p.sizes.map(s => `<span class="size-badge">${s}</span>`).join('') 
+                        : '<span style="color:#666;">N/A</span>';
+
                     tbody.innerHTML += `
                         <tr>
                             <td><img src="${p.img}" class="prod-img-preview" alt="img"></td>
                             <td><strong>${p.title}</strong></td>
+                            <td>${sizesHTML}</td>
                             <td style="color: #aaa; font-size: 0.85rem;">${p.details || 'N/A'}</td>
                             <td>৳ ${p.price.toLocaleString()}</td>
                             <td>${p.stock} pcs</td>
@@ -552,12 +670,17 @@
             const stock = Number(document.getElementById('prodStock').value);
             const imgFile = document.getElementById('prodImage').files[0];
 
+            // Parse custom sizes entered by user
+            const rawSizes = document.getElementById('prodSizes').value;
+            const selectedSizes = rawSizes ? rawSizes.split(',').map(s => s.trim()).filter(s => s !== '') : [];
+
             if (imgFile) {
                 const reader = new FileReader();
                 reader.onload = function(evt) {
                     const newProd = {
                         id: Date.now(),
                         title: title,
+                        sizes: selectedSizes,
                         details: details,
                         price: price,
                         stock: stock,
@@ -737,6 +860,7 @@
         function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
 
         // Initial Executions
+        checkLoginState();
         renderProducts();
         renderOrders();
         renderCustomers();
