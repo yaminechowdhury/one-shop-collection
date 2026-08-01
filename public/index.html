@@ -1,138 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>One Shop Collection | Home</title>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Swiper Slider CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>One Shop Collection | Home</title>
+<!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<!-- Swiper Slider CSS -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!-- 1. Top Header Bar -->
+<div class="top-bar">
+<div class="top-info">
+<span><i class="fa-solid fa-phone"></i> +8801760893895</span>
+<span><i class="fa-solid fa-envelope"></i> oneshopcollection69@gmail.com</span>
+<span><i class="fa-solid fa-location-arrow"></i> Joydebpur, Gazipur City Corporation, Gazipur</span>
+</div>
+<div class="top-links">
+<a href="about.html"><i class="fa-solid fa-info-circle"></i> About Us</a>
+<a href="contact.html"><i class="fa-solid fa-comments"></i> Contact Us</a>
+<a href="https://www.facebook.com/oneshopcollection77" target="_blank"><i class="fa-brands fa-facebook-f"></i></a>
+<a href="https://wa.me/8801760893895" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+</div>
+</div>
 
-    <!-- 1. Top Header Bar -->
-    <div class="top-bar">
-        <div class="top-info">
-            <span><i class="fa-solid fa-phone"></i> +8801760893895</span>
-            <span><i class="fa-solid fa-envelope"></i> oneshopcollection69@gmail.com</span>
-            <span><i class="fa-solid fa-location-arrow"></i> Joydebpur, Gazipur City Corporation, Gazipur</span>
-        </div>
-        <div class="top-links">
-            <a href="about.html"><i class="fa-solid fa-info-circle"></i> About Us</a>
-            <a href="contact.html"><i class="fa-solid fa-comments"></i> Contact Us</a>
-            <a href="https://www.facebook.com/oneshopcollection77" target="_blank"><i class="fa-brands fa-facebook-f"></i></a>
-            <a href="https://wa.me/8801760893895" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
-        </div>
-    </div>
+<!-- 2. Main Branding & Search Header -->
+<header class="main-header">
+<div class="brand-logo-area">
+<a href="index.html" class="brand-link">
+<img src="logo.png" alt="One Shop Collection" class="brand-logo">
+<div class="brand-text">
+<h1>One Shop Collection</h1>
+<p>A Luxury Clothing & Lifestyle Brand</p>
+</div>
+</a>
+</div>
+<div class="header-search-bar">
+<select class="category-dropdown">
+<option value="all">All Categories</option>
+<option value="burberry">Burberry</option>
+<option value="calvin-klein">Calvin Klein</option>
+<option value="accessories">Accessories</option>
+<option value="clothing">Clothing</option>
+<option value="decor">Decor</option>
+<option value="jewelry">Jewelry</option>
+<option value="men">Men</option>
+<option value="shoes">Shoes</option>
+<option value="watch">Watch</option>
+<option value="women">Women</option>
+</select>
+<input type="text" placeholder="Search">
+<button class="search-submit"><i class="fa-solid fa-magnifying-glass"></i></button>
+</div>
+<div class="header-widgets">
+<a href="wishlist.html" class="widget-box">
+<i class="fa-regular fa-heart"></i>
+<span class="count-badge">0</span>
+</a>
+<a href="cart.html" class="widget-box cart-widget">
+<i class="fa-solid fa-basket-shopping"></i>
+<span class="count-badge">0</span>
+<div class="cart-details">
+<span class="label">Total</span>
+<span class="price">0.00</span>
+</div>
+</a>
+</div>
+</header>
 
-    <!-- 2. Main Branding & Search Header -->
-    <header class="main-header">
-        <div class="brand-logo-area">
-            <a href="index.html" class="brand-link">
-                <img src="logo.png" alt="One Shop Collection" class="brand-logo">
-                <div class="brand-text">
-                    <h1>One Shop Collection</h1>
-                    <p>A Luxury Clothing & Lifestyle Brand</p>
-                </div>
-            </a>
-        </div>
+<!-- 3. Navigation Bar -->
+<nav class="navbar">
+<ul class="nav-menu">
+<li><a href="index.html" class="active"><i class="fa-solid fa-house"></i> HOME</a></li>
+<li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
+<li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
+<li><a href="cart.html"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
+<li><a href="checkout.html"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
+<li><a href="account.html"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
+</ul>
+<div class="account-dropdown-btn">
+<a href="account.html"><i class="fa-solid fa-user"></i> My Account <i class="fa-solid fa-caret-down"></i></a>
+</div>
+</nav>
 
-        <div class="header-search-bar">
-            <select class="category-dropdown">
-                <option value="all">All Categories</option>
-                <option value="burberry">Burberry</option>
-                <option value="calvin-klein">Calvin Klein</option>
-                <option value="accessories">Accessories</option>
-                <option value="clothing">Clothing</option>
-                <option value="decor">Decor</option>
-                <option value="jewelry">Jewelry</option>
-                <option value="men">Men</option>
-                <option value="shoes">Shoes</option>
-                <option value="watch">Watch</option>
-                <option value="women">Women</option>
-            </select>
-            <input type="text" placeholder="Search">
-            <button class="search-submit"><i class="fa-solid fa-magnifying-glass"></i></button>
-        </div>
+<!-- Banner Slider -->
+<section class="hero-slider-section">
+<div class="swiper mySwiper">
+<div class="swiper-wrapper">
+<div class="swiper-slide banner-1">
+<div class="slide-content">
+<h2>ELEGANT COLLECTION</h2>
+<p>PREMIUM QUALITY AT BEST PRICES</p>
+<a href="shop.html" class="shop-now-btn">SHOP NOW</a>
+</div>
+</div>
+</div>
+</div>
+</section>
 
-        <div class="header-widgets">
-            <a href="wishlist.html" class="widget-box">
-                <i class="fa-regular fa-heart"></i>
-                <span class="count-badge">0</span>
-            </a>
-            <a href="cart.html" class="widget-box cart-widget">
-                <i class="fa-solid fa-basket-shopping"></i>
-                <span class="count-badge">0</span>
-                <div class="cart-details">
-                    <span class="label">Total</span>
-                    <span class="price">৳0.00</span>
-                </div>
-            </a>
-        </div>
-    </header>
+<!-- Product Grid -->
+<section class="main-container">
+<h2 class="section-title">FEATURED PRODUCTS</h2>
+<div class="product-grid" id="featured-products-container">
+  <!-- Dynamic featured products will be loaded here -->
+</div>
+</section>
 
-    <!-- 3. Navigation Bar (Exact Hyper Touch Layout) -->
-    <nav class="navbar">
-        <ul class="nav-menu">
-            <li><a href="index.html" class="active"><i class="fa-solid fa-house"></i> HOME</a></li>
-            <li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
-            <li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
-            <li><a href="cart.html"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
-            <li><a href="checkout.html"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
-            <li><a href="account.html"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
-        </ul>
-        <div class="account-dropdown-btn">
-            <a href="account.html"><i class="fa-solid fa-user"></i> My Account <i class="fa-solid fa-caret-down"></i></a>
-        </div>
-    </nav>
+<script>
+  function loadFeaturedProducts() {
+    const container = document.getElementById('featured-products-container');
+    const allProducts = JSON.parse(localStorage.getItem('admin_products')) || [];
+    
+    // Filter only products that are featured and not hidden
+    const featuredProducts = allProducts.filter(p => p.isFeatured && !p.isHidden);
 
-    <!-- Banner Slider -->
-    <section class="hero-slider-section">
-        <div class="swiper mySwiper">
-            <div class="swiper-wrapper">
-                <div class="swiper-slide banner-1">
-                    <div class="slide-content">
-                        <h2>ELEGANT COLLECTION</h2>
-                        <p>PREMIUM QUALITY AT BEST PRICES</p>
-                        <a href="shop.html" class="shop-now-btn">SHOP NOW</a>
-                    </div>
-                </div>
+    container.innerHTML = '';
+
+    if (featuredProducts.length === 0) {
+      container.innerHTML = '<p style="text-align:center; width:100%; color:#888; grid-column: 1 / -1;">No Featured Products Available!</p>';
+      return;
+    }
+
+    featuredProducts.forEach(p => {
+      container.innerHTML += `
+        <div class="product-card">
+          <div class="badge-tag">Featured</div>
+          <img src="${p.img}" alt="${p.title}">
+          <div class="card-body">
+            <h3>${p.title}</h3>
+            <div class="stars">
+              <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
             </div>
+            <div class="price">৳ ${Number(p.price).toLocaleString()}</div>
+            <button class="add-to-cart-btn"><i class="fa-solid fa-basket-shopping"></i> ADD TO CART</button>
+          </div>
         </div>
-    </section>
+      `;
+    });
+  }
 
-    <!-- Product Grid -->
-    <section class="main-container">
-        <h2 class="section-title">FEATURED PRODUCTS</h2>
-        <div class="product-grid">
-            <div class="product-card">
-                <div class="badge-tag">New</div>
-                <img src="https://via.placeholder.com/300x250" alt="Product Image">
-                <div class="card-body">
-                    <h3>Luxury Men's Polo</h3>
-                    <div class="stars">
-                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-                    </div>
-                    <div class="price">৳ 1,250.00</div>
-                    <button class="add-to-cart-btn"><i class="fa-solid fa-basket-shopping"></i> ADD TO CART</button>
-                </div>
-            </div>
-
-            <div class="product-card">
-                <img src="https://via.placeholder.com/300x250" alt="Product Image">
-                <div class="card-body">
-                    <h3>Premium Leather Wallet</h3>
-                    <div class="stars">
-                        <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i>
-                    </div>
-                    <div class="price">৳ 850.00</div>
-                    <button class="add-to-cart-btn"><i class="fa-solid fa-basket-shopping"></i> ADD TO CART</button>
-                </div>
-            </div>
-        </div>
-    </section>
-
+  document.addEventListener('DOMContentLoaded', loadFeaturedProducts);
+</script>
 </body>
 </html>
