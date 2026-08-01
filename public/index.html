@@ -38,20 +38,10 @@
 </a>
 </div>
 <div class="header-search-bar">
-<select class="category-dropdown">
+<select class="category-dropdown" id="searchCategorySelect">
 <option value="all">All Categories</option>
-<option value="burberry">Burberry</option>
-<option value="calvin-klein">Calvin Klein</option>
-<option value="accessories">Accessories</option>
-<option value="clothing">Clothing</option>
-<option value="decor">Decor</option>
-<option value="jewelry">Jewelry</option>
-<option value="men">Men</option>
-<option value="shoes">Shoes</option>
-<option value="watch">Watch</option>
-<option value="women">Women</option>
 </select>
-<input type="text" placeholder="Search">
+<input type="text" id="searchInput" placeholder="Search...">
 <button class="search-submit"><i class="fa-solid fa-magnifying-glass"></i></button>
 </div>
 <div class="header-widgets">
@@ -126,7 +116,7 @@
     featuredProducts.forEach(p => {
       container.innerHTML += `
         <div class="product-card">
-          <div class="badge-tag">Featured</div>
+          <div class="badge-tag">${p.category || 'Featured'}</div>
           <img src="${p.img}" alt="${p.title}">
           <div class="card-body">
             <h3>${p.title}</h3>

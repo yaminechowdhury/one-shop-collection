@@ -287,19 +287,16 @@ th { background-color: #1a1a1a; color: var(--accent-gold); text-transform: upper
   border-radius: 4px;
   outline: none;
 }
-/* --- Size Badge Styling --- */
-.size-badge {
-  display: inline-block;
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+
+.category-badge {
   background: #333;
   color: var(--accent-gold);
-  padding: 2px 7px;
-  border-radius: 3px;
+  padding: 3px 8px;
+  border-radius: 4px;
   font-size: 0.8rem;
-  margin: 2px;
   border: 1px solid #444;
-  font-weight: 600;
 }
-.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 
 @media (max-width: 768px) {
   .sidebar { position: fixed; left: -250px; height: 100%; }
@@ -389,6 +386,7 @@ th { background-color: #1a1a1a; color: var(--accent-gold); text-transform: upper
           <tr>
             <th>Image</th>
             <th>Product Name</th>
+            <th>Category</th>
             <th>Price</th>
             <th>Stock</th>
             <th>Featured?</th>
@@ -484,6 +482,10 @@ th { background-color: #1a1a1a; color: var(--accent-gold); text-transform: upper
         <input type="text" id="prodTitle" placeholder="e.g. Slim Fit Denim Shirt" required>
       </div>
       <div class="form-group">
+        <label>Category Name (টাইপ করুন) *</label>
+        <input type="text" id="prodCategory" placeholder="e.g. Men, Shoes, Watch, Accessories..." required>
+      </div>
+      <div class="form-group">
         <label>Available Sizes (কমা দিয়ে আলাদা লিখুন)</label>
         <input type="text" id="prodSizes" placeholder="e.g. 40, 42, 44 অথবা M, L, XL">
       </div>
@@ -512,7 +514,6 @@ th { background-color: #1a1a1a; color: var(--accent-gold); text-transform: upper
 </div>
 
 <script>
-// Password Security Initial Setup
 let currentAdminPass = localStorage.getItem('admin_password') || 'admin123';
 
 function handleAdminLogin(e) {
@@ -549,17 +550,14 @@ function saveAdminSettings() {
   }
 }
 
-// Fetch Data from localStorage or empty arrays
 let products = JSON.parse(localStorage.getItem('admin_products')) || [];
 let orders = JSON.parse(localStorage.getItem('admin_orders')) || [];
 let customers = JSON.parse(localStorage.getItem('admin_customers')) || [];
 
-// Analytics Default Data
 let analyticsSales = JSON.parse(localStorage.getItem('admin_analytics_sales')) || [0, 0, 0, 0, 0, 0, 0];
 let analyticsOrders = JSON.parse(localStorage.getItem('admin_analytics_orders')) || [0, 0, 0, 0, 0, 0, 0];
 let salesChartInstance = null;
 
-// Save Function
 function saveData() {
   localStorage.setItem('admin_products', JSON.stringify(products));
   localStorage.setItem('admin_orders', JSON.stringify(orders));
@@ -569,7 +567,6 @@ function saveData() {
   updateDashboardMetrics();
 }
 
-// Update Dashboard Summary Stats
 function updateDashboardMetrics() {
   document.getElementById('dash-prod-count').innerText = products.length;
   document.getElementById('dash-orders-count').innerText = orders.length;
@@ -584,13 +581,14 @@ function renderProducts() {
   tbody.innerHTML = '';
 
   if (products.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; color:#aaa;">No products found!</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center; color:#aaa;">No products found!</td></tr>`;
   } else {
     products.forEach((p, index) => {
       tbody.innerHTML += `
         <tr>
           <td><img src="${p.img}" class="prod-img-preview" alt="img"></td>
           <td><strong>${p.title}</strong></td>
+          <td><span class="category-badge">${p.category || 'General'}</span></td>
           <td>৳ ${p.price.toLocaleString()}</td>
           <td>${p.stock} pcs</td>
           <td>
@@ -635,6 +633,7 @@ function deleteProduct(index) {
 function handleAddProduct(e) {
   e.preventDefault();
   const title = document.getElementById('prodTitle').value;
+  const category = document.getElementById('prodCategory').value.trim();
   const details = document.getElementById('prodDetails').value;
   const price = Number(document.getElementById('prodPrice').value);
   const stock = Number(document.getElementById('prodStock').value);
@@ -648,6 +647,7 @@ function handleAddProduct(e) {
       const newProd = {
         id: Date.now(),
         title: title,
+        category: category || 'General',
         sizes: selectedSizes,
         details: details,
         price: price,
@@ -823,7 +823,6 @@ function openModal() { document.getElementById('productModal').style.display = '
 function closeModal() { document.getElementById('productModal').style.display = 'none'; }
 function toggleSidebar() { document.getElementById('sidebar').classList.toggle('active'); }
 
-// Initial Executions
 checkLoginState();
 renderProducts();
 renderOrders();

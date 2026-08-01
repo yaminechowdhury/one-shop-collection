@@ -5,6 +5,10 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  category: {
+    type: String,
+    default: 'General'
+  },
   type: {
     type: String
   },
@@ -25,7 +29,6 @@ const productSchema = new mongoose.Schema({
   img: {
     type: String
   },
-  // নতুন যুক্ত করা অপশনসমূহ:
   isFeatured: {
     type: Boolean,
     default: false
