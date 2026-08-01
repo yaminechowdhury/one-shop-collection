@@ -26,9 +26,9 @@ const productSchema = new mongoose.Schema({
   sizes: [
     { type: String }
   ],
-  img: {
-    type: String
-  },
+  images: [
+    { type: String } // একাধিক ইমেজের লিংক বা Base64 রাখার জন্য অ্যারে
+  ],
   isFeatured: {
     type: Boolean,
     default: false

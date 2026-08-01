@@ -8,7 +8,101 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <!-- Swiper Slider CSS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css"/>
+<!-- Swiper Slider JS -->
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <link rel="stylesheet" href="style.css">
+<style>
+.product-card {
+  background: #242424;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #333;
+  position: relative;
+}
+.product-slider {
+  width: 100%;
+  height: 220px;
+  background: #1a1a1a;
+}
+.product-slider img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.badge-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: #ffb400;
+  color: #000;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  border-radius: 4px;
+  z-index: 10;
+}
+.card-body {
+  padding: 15px;
+}
+.price {
+  color: #ffb400;
+  font-size: 1.1rem;
+  font-weight: bold;
+  margin: 10px 0;
+}
+.add-to-cart-btn, .view-details-btn {
+  width: 100%;
+  padding: 8px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 5px;
+}
+.add-to-cart-btn { background: #ffb400; color: #000; }
+.view-details-btn { background: #333; color: #fff; }
+
+/* Product Details Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 3000;
+}
+.modal-content {
+  background: #242424;
+  width: 90%;
+  max-width: 600px;
+  border-radius: 8px;
+  padding: 20px;
+  position: relative;
+  border: 1px solid #ffb400;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.close-modal-btn {
+  position: absolute;
+  top: 10px; right: 15px;
+  color: #fff;
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+.detail-slider {
+  width: 100%;
+  height: 300px;
+  border-radius: 6px;
+  overflow: hidden;
+  margin-bottom: 15px;
+}
+.detail-slider img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+</style>
 </head>
 <body>
 <!-- 1. Top Header Bar -->
@@ -75,37 +169,40 @@
 </div>
 </nav>
 
-<!-- Banner Slider -->
-<section class="hero-slider-section">
-<div class="swiper mySwiper">
-<div class="swiper-wrapper">
-<div class="swiper-slide banner-1">
-<div class="slide-content">
-<h2>ELEGANT COLLECTION</h2>
-<p>PREMIUM QUALITY AT BEST PRICES</p>
-<a href="shop.html" class="shop-now-btn">SHOP NOW</a>
-</div>
-</div>
-</div>
+<!-- Product Grid -->
+<section class="main-container" style="padding: 30px;">
+<h2 class="section-title" style="color: #ffb400; margin-bottom: 20px;">FEATURED PRODUCTS</h2>
+<div class="product-grid" id="featured-products-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 20px;">
+  <!-- Dynamic featured products with image slider -->
 </div>
 </section>
 
-<!-- Product Grid -->
-<section class="main-container">
-<h2 class="section-title">FEATURED PRODUCTS</h2>
-<div class="product-grid" id="featured-products-container">
-  <!-- Dynamic featured products will be loaded here -->
+<!-- Product View Details Modal -->
+<div class="modal-overlay" id="productDetailModal">
+  <div class="modal-content">
+    <span class="close-modal-btn" onclick="closeDetailModal()">&times;</span>
+    <div class="swiper detail-slider" id="detailSwiper">
+      <div class="swiper-wrapper" id="detail-slider-wrapper"></div>
+      <div class="swiper-button-next"></div>
+      <div class="swiper-button-prev"></div>
+      <div class="swiper-pagination"></div>
+    </div>
+    <h2 id="detailTitle" style="color: #ffb400;"></h2>
+    <div id="detailCategory" style="color: #aaa; margin: 5px 0;"></div>
+    <div id="detailPrice" class="price"></div>
+    <p id="detailDescription" style="color: #ddd; font-size: 0.9rem; margin-bottom: 15px;"></p>
+    <button class="add-to-cart-btn"><i class="fa-solid fa-basket-shopping"></i> ADD TO CART</button>
+  </div>
 </div>
-</section>
 
 <script>
+  let featuredProducts = [];
+
   function loadFeaturedProducts() {
     const container = document.getElementById('featured-products-container');
     const allProducts = JSON.parse(localStorage.getItem('admin_products')) || [];
     
-    // Filter only products that are featured and not hidden
-    const featuredProducts = allProducts.filter(p => p.isFeatured && !p.isHidden);
-
+    featuredProducts = allProducts.filter(p => p.isFeatured && !p.isHidden);
     container.innerHTML = '';
 
     if (featuredProducts.length === 0) {
@@ -113,22 +210,69 @@
       return;
     }
 
-    featuredProducts.forEach(p => {
+    featuredProducts.forEach((p, idx) => {
+      const imagesList = (p.images && p.images.length > 0) ? p.images : [p.img || ''];
+      
+      let slidesHTML = imagesList.map(imgSrc => `<div class="swiper-slide"><img src="${imgSrc}" alt="${p.title}"></div>`).join('');
+
       container.innerHTML += `
         <div class="product-card">
           <div class="badge-tag">${p.category || 'Featured'}</div>
-          <img src="${p.img}" alt="${p.title}">
+          
+          <!-- Image Slider -->
+          <div class="swiper product-slider prod-swiper-${idx}">
+            <div class="swiper-wrapper">
+              ${slidesHTML}
+            </div>
+          </div>
+
           <div class="card-body">
             <h3>${p.title}</h3>
-            <div class="stars">
-              <i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i>
-            </div>
             <div class="price">৳ ${Number(p.price).toLocaleString()}</div>
+            <button class="view-details-btn" onclick="openDetailModal(${idx})"><i class="fa-solid fa-eye"></i> View Details</button>
             <button class="add-to-cart-btn"><i class="fa-solid fa-basket-shopping"></i> ADD TO CART</button>
           </div>
         </div>
       `;
     });
+
+    // Initialize Card Swipers with Autoplay
+    featuredProducts.forEach((_, idx) => {
+      new Swiper(`.prod-swiper-${idx}`, {
+        loop: true,
+        autoplay: {
+          delay: 2500,
+          disableOnInteraction: false,
+        },
+      });
+    });
+  }
+
+  function openDetailModal(idx) {
+    const p = featuredProducts[idx];
+    const imagesList = (p.images && p.images.length > 0) ? p.images : [p.img || ''];
+
+    document.getElementById('detailTitle').innerText = p.title;
+    document.getElementById('detailCategory').innerText = "Category: " + (p.category || 'General');
+    document.getElementById('detailPrice').innerText = "৳ " + Number(p.price).toLocaleString();
+    document.getElementById('detailDescription').innerText = p.details || "No details provided.";
+
+    const wrapper = document.getElementById('detail-slider-wrapper');
+    wrapper.innerHTML = imagesList.map(imgSrc => `<div class="swiper-slide"><img src="${imgSrc}"></div>`).join('');
+
+    document.getElementById('productDetailModal').style.display = 'flex';
+
+    // Initialize Modal Swiper
+    new Swiper('#detailSwiper', {
+      loop: true,
+      autoplay: { delay: 2000 },
+      navigation: { nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' },
+      pagination: { el: '.swiper-pagination', clickable: true },
+    });
+  }
+
+  function closeDetailModal() {
+    document.getElementById('productDetailModal').style.display = 'none';
   }
 
   document.addEventListener('DOMContentLoaded', loadFeaturedProducts);
