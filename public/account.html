@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account | One Shop Collection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>.brand-logo { max-width: 180px; height: auto; }</style>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="index.html"><img src="logo.png" alt="Logo" class="brand-logo"></a>
+    </header>
+
+    <nav class="navbar">
+        <ul class="nav-menu">
+            <li><a href="index.html"><i class="fa-solid fa-house"></i> HOME</a></li>
+            <li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
+            <li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
+            <li><a href="cart.html"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
+            <li><a href="checkout.html"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
+            <li><a href="account.html" class="active"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-container">
+        <h2 class="section-title">MY ACCOUNT</h2>
+        <div style="display: flex; gap: 30px; flex-wrap: wrap;">
+            <form style="flex: 1; background: #2a2a2a; padding: 25px; border-radius: 4px; display: flex; flex-direction: column; gap: 15px;">
+                <h3 style="color: #ffb400;">LOGIN</h3>
+                <input type="email" placeholder="Email *" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+                <input type="password" placeholder="Password *" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+                <button type="submit" class="add-to-cart-btn">LOGIN</button>
+            </form>
+
+            <form style="flex: 1; background: #2a2a2a; padding: 25px; border-radius: 4px; display: flex; flex-direction: column; gap: 15px;">
+                <h3 style="color: #ffb400;">REGISTER</h3>
+                <input type="email" placeholder="Email *" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+                <input type="password" placeholder="Password *" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+                <button type="submit" class="add-to-cart-btn">REGISTER</button>
+            </form>
+        </div>
+    </div>
+
+</body>
+</html>

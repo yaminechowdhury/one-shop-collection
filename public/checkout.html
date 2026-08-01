@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | One Shop Collection</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+    <style>.brand-logo { max-width: 180px; height: auto; }</style>
+</head>
+<body>
+
+    <header class="main-header">
+        <a href="index.html"><img src="logo.png" alt="Logo" class="brand-logo"></a>
+    </header>
+
+    <nav class="navbar">
+        <ul class="nav-menu">
+            <li><a href="index.html"><i class="fa-solid fa-house"></i> HOME</a></li>
+            <li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
+            <li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
+            <li><a href="cart.html"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
+            <li><a href="checkout.html" class="active"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
+            <li><a href="account.html"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
+        </ul>
+    </nav>
+
+    <div class="main-container">
+        <h2 class="section-title">CHECKOUT</h2>
+        <form style="background: #2a2a2a; padding: 30px; border-radius: 4px; max-width: 600px; margin: auto; display: flex; flex-direction: column; gap: 15px;">
+            <label style="color: #ffb400;">Full Name *</label>
+            <input type="text" placeholder="Enter full name" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+            
+            <label style="color: #ffb400;">Phone Number *</label>
+            <input type="text" placeholder="017XXXXXXXX" style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required>
+            
+            <label style="color: #ffb400;">Full Address *</label>
+            <textarea placeholder="Address details..." style="padding: 10px; background: #1c1c1c; border: 1px solid #444; color: #fff;" required></textarea>
+
+            <button type="submit" class="add-to-cart-btn" style="margin-top: 10px;">PLACE ORDER</button>
+        </form>
+    </div>
+
+</body>
+</html>

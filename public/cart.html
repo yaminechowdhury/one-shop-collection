@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cart | One Shop Collection</title>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #222222;
+            color: #e0e0e0;
+        }
+
+        /* Header Area */
+        .main-header {
+            background-color: #262626;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 6%;
+            border-bottom: 1px solid #333;
+        }
+
+        .brand-logo {
+            max-width: 160px;
+            height: auto;
+            display: block;
+        }
+
+        /* Navbar */
+        .navbar {
+            background-color: #1a1a1a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 6%;
+            border-bottom: 1px solid #333;
+        }
+
+        .nav-menu {
+            list-style: none;
+            display: flex;
+        }
+
+        .nav-menu li a {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 16px 20px;
+            color: #ffb400;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.85rem;
+            transition: 0.2s;
+        }
+
+        .nav-menu li a:hover,
+        .nav-menu li a.active {
+            background-color: #262626;
+            color: #ffffff;
+        }
+
+        /* Cart Main Container */
+        .main-container {
+            padding: 40px 6%;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .section-title {
+            color: #ffb400;
+            font-size: 1.5rem;
+            margin-bottom: 25px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 10px;
+        }
+
+        /* Cart Table Layout */
+        .cart-table-container {
+            overflow-x: auto;
+            background: #2a2a2a;
+            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            margin-bottom: 30px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+        }
+
+        th, td {
+            padding: 15px;
+            border-bottom: 1px solid #3a3a3a;
+        }
+
+        th {
+            background-color: #1c1c1c;
+            color: #ffb400;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+        }
+
+        td {
+            color: #ffffff;
+            font-size: 0.95rem;
+        }
+
+        .qty-btn {
+            background: #1a1a1a;
+            color: #ffb400;
+            border: 1px solid #ffb400;
+            width: 28px;
+            height: 28px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 3px;
+        }
+
+        .delete-btn {
+            color: #ff4d4d;
+            cursor: pointer;
+            font-size: 1.1rem;
+            border: none;
+            background: none;
+        }
+
+        /* Cart Summary Box */
+        .cart-summary {
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 4px;
+            border: 1px solid #3a3a3a;
+            max-width: 400px;
+            margin-left: auto;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 1rem;
+        }
+
+        .summary-row.total {
+            color: #ffb400;
+            font-weight: bold;
+            font-size: 1.2rem;
+            border-top: 1px solid #444;
+            padding-top: 10px;
+        }
+
+        .checkout-btn {
+            display: block;
+            width: 100%;
+            text-align: center;
+            background: #ffb400;
+            color: #000000;
+            padding: 12px;
+            font-weight: bold;
+            text-decoration: none;
+            border-radius: 3px;
+            margin-top: 15px;
+            transition: 0.3s;
+        }
+
+        .checkout-btn:hover {
+            background: #e09e00;
+        }
+
+        .empty-msg {
+            text-align: center;
+            padding: 40px;
+            color: #aaa;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="main-header">
+        <a href="index.html">
+            <img src="logo.png" alt="One Shop Collection" class="brand-logo">
+        </a>
+    </header>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <ul class="nav-menu">
+            <li><a href="index.html"><i class="fa-solid fa-house"></i> HOME</a></li>
+            <li><a href="shop.html"><i class="fa-solid fa-cart-shopping"></i> SHOP</a></li>
+            <li><a href="wishlist.html"><i class="fa-solid fa-bag-shopping"></i> WISHLIST</a></li>
+            <li><a href="cart.html" class="active"><i class="fa-solid fa-basket-shopping"></i> CART</a></li>
+            <li><a href="checkout.html"><i class="fa-solid fa-share"></i> CHECKOUT</a></li>
+            <li><a href="account.html"><i class="fa-solid fa-user"></i> MY ACCOUNT</a></li>
+        </ul>
+    </nav>
+
+    <!-- Cart Main Content -->
+    <div class="main-container">
+        <h2 class="section-title">YOUR SHOPPING CART</h2>
+
+        <div class="cart-table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Price</th>
+                        <th>Quantity</th>
+                        <th>Subtotal</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="cart-items-body">
+                    <!-- JavaScript dynamic items will load here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="cart-summary">
+            <div class="summary-row">
+                <span>Subtotal:</span>
+                <span id="subtotal-val">৳ 0.00</span>
+            </div>
+            <div class="summary-row">
+                <span>Shipping:</span>
+                <span>৳ 60.00</span>
+            </div>
+            <div class="summary-row total">
+                <span>Total:</span>
+                <span id="total-val">৳ 0.00</span>
+            </div>
+            <a href="checkout.html" class="checkout-btn">PROCEED TO CHECKOUT</a>
+        </div>
+    </div>
+
+    <!-- JavaScript to Handle Cart Items -->
+    <script>
+        // Sample Products inside Cart
+        let cart = [
+            { id: 1, name: "Premium Men's Shirt", price: 1250, qty: 1 },
+            { id: 2, name: "Leather Wallet", price: 850, qty: 2 }
+        ];
+
+        function renderCart() {
+            const tbody = document.getElementById('cart-items-body');
+            tbody.innerHTML = '';
+
+            if (cart.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="empty-msg">Your cart is empty right now!</td></tr>`;
+                document.getElementById('subtotal-val').innerText = '৳ 0.00';
+                document.getElementById('total-val').innerText = '৳ 0.00';
+                return;
+            }
+
+            let subtotal = 0;
+
+            cart.forEach((item, index) => {
+                let itemTotal = item.price * item.qty;
+                subtotal += itemTotal;
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>৳ ${item.price.toLocaleString()}</td>
+                        <td>
+                            <button class="qty-btn" onclick="updateQty(${index}, -1)">-</button>
+                            <span style="margin: 0 8px; font-weight: bold;">${item.qty}</span>
+                            <button class="qty-btn" onclick="updateQty(${index}, 1)">+</button>
+                        </td>
+                        <td>৳ ${itemTotal.toLocaleString()}</td>
+                        <td>
+                            <button class="delete-btn" onclick="removeItem(${index})"><i class="fa-solid fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            const shipping = 60;
+            document.getElementById('subtotal-val').innerText = '৳ ' + subtotal.toLocaleString();
+            document.getElementById('total-val').innerText = '৳ ' + (subtotal + shipping).toLocaleString();
+        }
+
+        function updateQty(index, change) {
+            if (cart[index].qty + change > 0) {
+                cart[index].qty += change;
+            }
+            renderCart();
+        }
+
+        function removeItem(index) {
+            cart.splice(index, 1);
+            renderCart();
+        }
+
+        // Initialize on Load
+        renderCart();
+    </script>
+</body>
+</html>
