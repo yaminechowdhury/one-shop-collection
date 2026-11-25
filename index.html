@@ -424,15 +424,21 @@
     <div class="modal" id="adminPanelModal">
         <div class="modal-content large">
             <span class="close-btn" onclick="closeModal('adminPanelModal')">&times;</span>
-            <h2>Admin Dashboard</h2>
+            <div class="admin-top-banner">
+                <div>
+                    <h2>⚡ Smart Admin Command Center</h2>
+                    <p>Bulk Product Actions, Instant Banner Control & Store Analytics</p>
+                </div>
+                <span class="admin-pill">Pro Control</span>
+            </div>
             
             <div class="admin-tabs">
                 <button class="active" onclick="switchAdminTab('analytics', event)">📊 Analytics</button>
-                <button onclick="switchAdminTab('addProduct', event)">Add Product</button>
-                <button onclick="switchAdminTab('manageProducts', event)">Manage Products</button>
-                <button onclick="switchAdminTab('manageOrders', event)">Orders</button>
-                <button onclick="switchAdminTab('addBanner', event)">Banner</button>
-                <button onclick="switchAdminTab('manageLogo', event)">Logo</button>
+                <button onclick="switchAdminTab('addProduct', event)">➕ Add Product</button>
+                <button onclick="switchAdminTab('manageProducts', event)">📦 Bulk Manage</button>
+                <button onclick="switchAdminTab('manageOrders', event)">🚚 Orders</button>
+                <button onclick="switchAdminTab('addBanner', event)">🖼️ Banners</button>
+                <button onclick="switchAdminTab('manageLogo', event)">🏷️ Logo</button>
             </div>
 
             <div class="admin-tab-content active" id="adminAnalytics">
@@ -484,6 +490,20 @@
             </div>
 
             <div class="admin-tab-content" id="adminManageProducts">
+                <div class="bulk-toolbar">
+                    <div class="bulk-top-row">
+                        <label class="bulk-select-all">
+                            <input type="checkbox" id="selectAllProductsCheck" onchange="toggleSelectAllProducts(this.checked)">
+                            <span>Select All (<span id="selectedProductCount">0</span> selected)</span>
+                        </label>
+                        <input type="text" id="adminProdSearch" placeholder="Search product or category..." onkeyup="renderAdminProductList()" class="bulk-search-input">
+                    </div>
+                    <div class="bulk-action-buttons">
+                        <button type="button" class="bulk-btn feature-btn" onclick="bulkToggleFeature(true)">⭐ Feature Selected</button>
+                        <button type="button" class="bulk-btn unfeature-btn" onclick="bulkToggleFeature(false)">Unfeature Selected</button>
+                        <button type="button" class="bulk-btn delete-btn" onclick="bulkDeleteProducts()">🗑️ Delete Selected</button>
+                    </div>
+                </div>
                 <div id="adminProductList"></div>
             </div>
 
@@ -494,11 +514,14 @@
             <div class="admin-tab-content" id="adminAddBanner">
                 <form onsubmit="handleAddBanner(event)">
                     <label class="file-upload-label">
-                        <span>Select Banner Image (PC/Mobile):</span>
+                        <span>Select Banner Image (PC/Mobile — Auto Compressed for Fast Storage):</span>
                         <input type="file" id="bImgFile" accept="image/*" required>
                     </label>
                     <button type="submit" class="submit-btn">Add Banner Slide</button>
                 </form>
+                <div class="banner-admin-actions">
+                    <button type="button" class="bulk-btn unfeature-btn" onclick="resetDefaultBanners()">Reset Default Banners</button>
+                </div>
                 <div id="bannerListAdmin" style="margin-top:15px;"></div>
             </div>
 

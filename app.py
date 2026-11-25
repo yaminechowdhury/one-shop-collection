@@ -18,69 +18,35 @@ HF_MODEL = "Qwen/Qwen2.5-7B-Instruct"
 HF_URL = f"https://router.huggingface.co/hf-inference/models/{HF_MODEL}/v1/chat/completions"
 
 OCCASIONS_50_PLUS = [
-    "Birthday party",
-    "Traditional occasion",
-    "Wedding reception",
-    "Holud ceremony",
-    "Engagement party",
-    "Anniversary dinner",
-    "Eid gathering",
-    "Puja celebration",
-    "Pohela Boishakh festival",
-    "Family get-together",
-    "Office meeting",
-    "Corporate presentation",
-    "Job interview",
-    "Client lunch",
-    "Convocation ceremony",
-    "Freshers reception",
-    "Farewell party",
-    "College/University fest",
-    "Seminar or workshop",
-    "Networking event",
-    "Smart-casual dinner date",
-    "Candlelight dinner",
-    "Coffee hangout",
-    "Rooftop hangout",
-    "Weekend brunch",
-    "Shopping trip",
-    "City outing",
-    "Movie night",
-    "Concert or live show",
-    "Cultural program",
-    "Art exhibition",
-    "Book fair visit",
-    "Museum tour",
-    "Road trip",
-    "Beach vacation",
-    "Hill station trip",
-    "Resort staycation",
-    "Garden party",
-    "Housewarming party",
-    "Baby shower",
-    "Graduation party",
-    "Reunion event",
-    "Club/Lounge night",
-    "Festive night party",
-    "Award night",
-    "Photo shoot session",
-    "Pre-wedding shoot",
-    "Casual Friday at work",
-    "Iftar party",
-    "New Year celebration",
-    "Winter picnic",
-    "Outdoor brunch",
+    "Birthday party", "Traditional occasion", "Wedding reception", "Holud ceremony",
+    "Engagement party", "Anniversary dinner", "Eid gathering", "Puja celebration",
+    "Pohela Boishakh festival", "Family get-together", "Office meeting", "Corporate presentation",
+    "Job interview", "Client lunch", "Convocation ceremony", "Freshers reception",
+    "Farewell party", "College/University fest", "Seminar or workshop", "Networking event",
+    "Smart-casual dinner date", "Candlelight dinner", "Coffee hangout", "Rooftop hangout",
+    "Weekend brunch", "Shopping trip", "City outing", "Movie night",
+    "Concert or live show", "Cultural program", "Art exhibition", "Book fair visit",
+    "Museum tour", "Road trip", "Beach vacation", "Hill station trip",
+    "Resort staycation", "Garden party", "Housewarming party", "Baby shower",
+    "Graduation party", "Reunion event", "Club/Lounge night", "Festive night party",
+    "Award night", "Photo shoot session", "Pre-wedding shoot", "Casual Friday at work",
+    "Iftar party", "New Year celebration", "Winter picnic", "Outdoor brunch"
 ]
 
 
-def decode_data_url(data_url: str):
-    if not data_url:
+def decode_image_source(src: str):
+    if not src:
         return None
     try:
-        if "," in data_url:
-            _, encoded = data_url.split(",", 1)
-        else:
-            encoded = data_url
+        if src.startswith("http://") or src.startswith("https://"):
+            resp = requests.get(src, timeout=10)
+            if resp.status_code == 200:
+                img = Image.open(io.BytesIO(resp.content)).convert("RGB")
+                img.thumbnail((512, 512))
+                return img
+            return None
+
+        encoded = src.split(",", 1)[1] if "," in src else src
         raw = base64.b64decode(encoded)
         img = Image.open(io.BytesIO(raw)).convert("RGB")
         img.thumbnail((512, 512))
@@ -104,7 +70,7 @@ def build_combined_board(persona: str, items: list):
             item = items[idx]
             name = str(item.get("name", f"Item {idx + 1}"))
             price = item.get("price", 0)
-            p_img = decode_data_url(str(item.get("img", "")))
+            p_img = decode_image_source(str(item.get("img", "")))
             if p_img:
                 p_img = p_img.resize((200, 175))
                 board.paste(p_img, (x, y))
@@ -127,12 +93,23 @@ def build_fallback_note(persona: str, items: list):
     main_item = names[0] if len(names) >= 1 else "এই শার্ট/টি-শার্ট"
     second_item = names[1] if len(names) >= 2 else "এই প্যান্ট"
 
-    pant_colors = random.choice(["নেভি ব্লু বা চারকোল গ্রে ফরমাল/জিন্স প্যান্ট", "ব্ল্যাক বা অলিভ গ্রিন জিন্স/ফরমাল প্যান্ট", "বেইজ বা ডার্ক ব্রাউন ফরমাল/চিনো প্যান্ট"])
-    top_colors = random.choice(["সাদা, স্কাই ব্লু বা প্যাস্টেল শার্ট/টি-শার্ট", "ব্ল্যাক, অফ-হোয়াইট বা মেরুন টি-শার্ট/শার্ট", "অলিভ, চারকোল বা ক্রিম শার্ট/টি-শার্ট"])
-    shoe_colors = random.choice(["ট্যান ব্রাউন বা ডার্ক চকলেট লোফার/শ্যুজ", "ক্লিন হোয়াইট স্নিকার্স বা ব্ল্যাক লোফার/শ্যুজ", "ব্ল্যাক লেদার লোফার বা ব্রাউন সুয়েড শ্যুজ"])
+    pant_colors = random.choice([
+        "নেভি ব্লু বা চারকোল গ্রে ফরমাল/জিন্স প্যান্ট",
+        "ব্ল্যাক বা অলিভ গ্রিন জিন্স/ফরমাল প্যান্ট",
+        "বেইজ বা ডার্ক ব্রাউন ফরমাল/চিনো প্যান্ট"
+    ])
+    top_colors = random.choice([
+        "সাদা, স্কাই ব্লু বা প্যাস্টেল শার্ট/টি-শার্ট",
+        "ব্ল্যাক, অফ-হোয়াইট বা মেরুন টি-শার্ট/শার্ট",
+        "অলিভ, চারকোল বা ক্রিম শার্ট/টি-শার্ট"
+    ])
+    shoe_colors = random.choice([
+        "ট্যান ব্রাউন বা ডার্ক চকলেট লোফার/শ্যুজ",
+        "ক্লিন হোয়াইট স্নিকার্স বা ব্ল্যাক লোফার/শ্যুজ",
+        "ব্ল্যাক লেদার লোফার বা ব্রাউন সুয়েড শ্যুজ"
+    ])
 
-    picked_events = random.sample(OCCASIONS_50_PLUS, 3)
-    events_str = ", ".join(picked_events)
+    events_str = ", ".join(random.sample(OCCASIONS_50_PLUS, 3))
 
     return (
         f"এই {main_item}-এর সাথে তোমার {pant_colors} মানাবে আর সাথে {shoe_colors} মানাবে। "

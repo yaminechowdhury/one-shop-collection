@@ -779,7 +779,7 @@ main {
 }
 
 .modal-content.mini { width: 300px; }
-.modal-content.large { width: 680px; }
+.modal-content.large { width: 720px; }
 
 .close-btn {
     position: absolute;
@@ -787,6 +787,39 @@ main {
     top: 10px;
     font-size: 24px;
     cursor: pointer;
+}
+
+.admin-top-banner {
+    background: linear-gradient(135deg, #0d233a, #1a365d);
+    color: #ffffff;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.admin-top-banner h2 {
+    font-size: 18px;
+    color: #f39c12;
+}
+
+.admin-top-banner p {
+    font-size: 12px;
+    color: #e2e8f0;
+    margin-top: 2px;
+}
+
+.admin-pill {
+    background: #f39c12;
+    color: #0d233a;
+    font-weight: 700;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
 }
 
 .auth-tabs, .admin-tabs {
@@ -809,6 +842,87 @@ main {
 .auth-tabs button.active, .admin-tabs button.active {
     border-bottom: 3px solid #1a365d;
     color: #1a365d;
+}
+
+.bulk-toolbar {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 14px;
+}
+
+.bulk-top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+}
+
+.bulk-select-all {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0d233a;
+    cursor: pointer;
+}
+
+.bulk-search-input {
+    padding: 7px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 13px;
+    min-width: 200px;
+}
+
+.bulk-action-buttons {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.bulk-btn {
+    border: none;
+    color: #ffffff;
+    padding: 7px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.bulk-btn.feature-btn { background: #16a34a; }
+.bulk-btn.unfeature-btn { background: #475569; }
+.bulk-btn.delete-btn { background: #dc2626; }
+
+.banner-admin-actions {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
+
+.banner-admin-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    background: #f8fafc;
+    margin-bottom: 8px;
+}
+
+.banner-admin-thumb {
+    width: 90px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
 }
 
 form {

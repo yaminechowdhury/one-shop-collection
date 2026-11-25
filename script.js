@@ -1,3 +1,6 @@
+const CLOUDINARY_CLOUD_NAME = "go4lgpen";
+const CLOUDINARY_UPLOAD_PRESET = "oneshop_unsigned";
+
 const categoriesList = [
     "Shirt", "T Shirt", "Polo Shirt", "Panabi", "Jeans",
     "Formal Pant", "Cargo Pant", "Gabardine Pant", "Joggers", "Hoodie",
@@ -7,6 +10,12 @@ const categoriesList = [
     "Men's Watch", "Ladies Watch", "Smart Watch", "Sunglasses", "Wallet & Card Holder",
     "Belt", "Cap & Hat", "Backpack", "Handbag & Purse", "Shoes & Sneakers",
     "Sandals & Loafers", "Perfume & Attar", "Jewellery", "Kids Wear", "Combo Pack"
+];
+
+const defaultBanners = [
+    "https://picsum.photos/1200/420?random=10",
+    "https://picsum.photos/1200/420?random=11",
+    "https://picsum.photos/1200/420?random=12"
 ];
 
 const placeholderSlotImg = "https://via.placeholder.com/120x120?text=Select+Item";
@@ -20,12 +29,7 @@ let products = JSON.parse(localStorage.getItem('store_products')) || [
     { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", desc: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", isFeatured: false }
 ];
 
-let banners = JSON.parse(localStorage.getItem('store_banners')) || [
-    "https://picsum.photos/1200/420?random=10",
-    "https://picsum.photos/1200/420?random=11",
-    "https://picsum.photos/1200/420?random=12"
-];
-
+let banners = JSON.parse(localStorage.getItem('store_banners')) || [...defaultBanners];
 let reviews = JSON.parse(localStorage.getItem('store_reviews')) || [
     { name: "Tanvir Ahmed", comment: "Fabric quality was top notch! Highly recommended.", fit: "True to Size", images: ["https://picsum.photos/200/200?random=20"] },
     { name: "Nusrat Jahan", comment: "Saree fabric is really smooth and gorgeous.", fit: "True to Size", images: [] }
@@ -36,10 +40,21 @@ let siteLogo = localStorage.getItem('site_logo') || "";
 
 let cart = [];
 let wishlist = [];
+let selectedProductIds = new Set();
 let slideIndex = 0;
 let slideInterval;
 let activeCombo = null;
 let currentStylePersona = "men";
+
+function safeSaveStorage(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (err) {
+        alert("ব্রাউজারের স্টোরেজ (LocalStorage) প্রায় ভরে গেছে! পুরোনো বড় ছবি বা ব্যানার ডিলিট করে আবার চেষ্টা করুন।");
+        return false;
+    }
+}
 
 document.addEventListener('DOMContentLoaded', () => {
     renderCategories();
@@ -104,17 +119,24 @@ function renderLogo() {
 
 function renderBanners() {
     const wrapper = document.getElementById('sliderWrapper');
-    if(wrapper) wrapper.innerHTML = banners.map(url => `<img src="${url}">`).join('');
+    if (wrapper) {
+        if (!banners || banners.length === 0) {
+            banners = [...defaultBanners];
+        }
+        wrapper.innerHTML = banners.map(url => `<img src="${url}" alt="Store Banner">`).join('');
+        slideIndex = 0;
+        wrapper.style.transform = `translateX(0%)`;
+    }
 }
 
 function startSlider() {
     clearInterval(slideInterval);
-    if(banners.length > 0) {
+    if (banners.length > 0) {
         slideInterval = setInterval(() => {
             slideIndex = (slideIndex + 1) % banners.length;
             const wrapper = document.getElementById('sliderWrapper');
-            if(wrapper) wrapper.style.transform = `translateX(-${slideIndex * 100}%)`;
-        }, 2000);
+            if (wrapper) wrapper.style.transform = `translateX(-${slideIndex * 100}%)`;
+        }, 2500);
     }
 }
 
@@ -139,7 +161,7 @@ function openCategoryPopupFromPage() {
 
 function closeCategoryPopup() {
     const popup = document.getElementById('categoryPopup');
-    if(popup) popup.classList.remove('show');
+    if (popup) popup.classList.remove('show');
 }
 
 function filterCategory(catName) {
@@ -172,8 +194,8 @@ function renderProducts() {
 
 function renderGrid(containerId, list) {
     const container = document.getElementById(containerId);
-    if(!container) return;
-    if(list.length === 0) {
+    if (!container) return;
+    if (list.length === 0) {
         container.innerHTML = "<p>No products found in this category yet.</p>";
         return;
     }
@@ -209,7 +231,7 @@ function setupComboDropdowns() {
     const sel1 = document.getElementById('comboItem1');
     const sel2 = document.getElementById('comboItem2');
     const sel3 = document.getElementById('comboItem3');
-    if(!sel1 || !sel2 || !sel3) return;
+    if (!sel1 || !sel2 || !sel3) return;
 
     const optionsHtml = products.map(p => `<option value="${p.id}">${p.name} (৳${p.price})</option>`).join('');
     sel1.innerHTML = `<option value="">Select Shirt / Topwear</option>` + optionsHtml;
@@ -313,7 +335,7 @@ async function generateCombinedOutfitPreview() {
             imgEl.src = data.image;
             imgEl.style.display = "block";
             if (noteEl && data.stylist_note) {
-                noteEl.innerText = data.stylist_note;
+                noteEl.innerHTML = data.stylist_note.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
                 noteEl.style.display = "block";
             }
             if (statusEl) {
@@ -334,7 +356,7 @@ function calculateComboTotal() {
     const id2 = Number(document.getElementById('comboItem2').value);
     const id3 = Number(document.getElementById('comboItem3').value);
 
-    if(!id1 || !id2 || !id3) {
+    if (!id1 || !id2 || !id3) {
         document.getElementById('comboSummaryText').innerText = "Select 3 items to build your custom outfit.";
         document.getElementById('comboOrigPrice').innerText = "৳0";
         document.getElementById('comboDiscPrice').innerText = "৳0";
@@ -360,7 +382,7 @@ function calculateComboTotal() {
 }
 
 function addComboToCart() {
-    if(!activeCombo) {
+    if (!activeCombo) {
         alert("Please select all 3 items to build your combo first!");
         return;
     }
@@ -377,14 +399,14 @@ function addComboToCart() {
 function renderReviews() {
     const container = document.getElementById('reviewsContainer');
     const photoOnly = document.getElementById('photoOnlyCheck')?.checked || false;
-    if(!container) return;
+    if (!container) return;
 
     let displayReviews = reviews;
     if (photoOnly) {
         displayReviews = reviews.filter(r => r.images && r.images.length > 0);
     }
 
-    if(displayReviews.length === 0) {
+    if (displayReviews.length === 0) {
         container.innerHTML = "<p>No customer reviews match your filter.</p>";
         return;
     }
@@ -422,7 +444,7 @@ function handleReviewSubmit(e) {
     Promise.all(imagePromises).then(base64Images => {
         const newReview = { name: name, comment: comment, fit: fit, images: base64Images };
         reviews.unshift(newReview);
-        localStorage.setItem('store_reviews', JSON.stringify(reviews));
+        safeSaveStorage('store_reviews', reviews);
         renderReviews();
         renderAdminAnalytics();
         closeModal('addReviewModal');
@@ -434,12 +456,12 @@ function handleReviewSubmit(e) {
 function handleTrackOrder() {
     const phone = document.getElementById('trackPhoneInput').value.trim();
     const resultBox = document.getElementById('trackResult');
-    if(!phone) {
+    if (!phone) {
         resultBox.innerHTML = "<p style='color:red;'>Please enter a phone number.</p>";
         return;
     }
     const userOrders = orders.filter(o => o.phone === phone);
-    if(userOrders.length === 0) {
+    if (userOrders.length === 0) {
         resultBox.innerHTML = "<p style='color:#777;'>No orders found with this phone number.</p>";
     } else {
         resultBox.innerHTML = userOrders.map(o => `
@@ -544,7 +566,7 @@ function handleOrderConfirm(e) {
     };
 
     orders.unshift(newOrder);
-    localStorage.setItem('store_orders', JSON.stringify(orders));
+    safeSaveStorage('store_orders', orders);
 
     renderAdminOrdersList();
     renderAdminAnalytics();
@@ -611,7 +633,7 @@ function openAdminPassModal() {
 
 function verifyAdminPin() {
     const pin = document.getElementById('adminPinInput').value;
-    if(pin === '239855') {
+    if (pin === '239855') {
         closeModal('adminPassModal');
         openModal('adminPanelModal');
         renderAdminProductList();
@@ -639,11 +661,11 @@ function renderAdminAnalytics() {
     document.getElementById('statReviews').innerText = reviews.length;
 
     const list = document.getElementById('analyticsSummaryList');
-    if(list) {
+    if (list) {
         list.innerHTML = `
             <li>Total Active Products in Catalog: <strong>${products.length}</strong> across 40 Categories.</li>
+            <li>Active Banners on Home Slider: <strong>${banners.length}</strong></li>
             <li>Processing Orders: <strong>${orders.filter(o => o.status === 'Processing').length}</strong></li>
-            <li>Delivered Orders: <strong>${orders.filter(o => o.status === 'Delivered').length}</strong></li>
             <li>Photo-Verified Customer Reviews: <strong>${reviews.filter(r => r.images && r.images.length > 0).length}</strong></li>
         `;
     }
@@ -679,54 +701,197 @@ function updateOrderStatus(orderId, newStatus) {
     const order = orders.find(o => o.id === orderId);
     if (order) {
         order.status = newStatus;
-        localStorage.setItem('store_orders', JSON.stringify(orders));
+        safeSaveStorage('store_orders', orders);
         renderAdminOrdersList();
         renderAdminAnalytics();
     }
 }
 
-function convertFileToBase64(fileInput, callback) {
-    const file = fileInput.files[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e) { callback(e.target.result); };
-    reader.readAsDataURL(file);
+async function uploadImageSmart(fileInput, maxWidth, maxHeight, quality) {
+    const file = fileInput?.files?.[0];
+    if (!file) {
+        throw new Error("কোনো ছবি সিলেক্ট করা হয়নি।");
+    }
+
+    if (CLOUDINARY_CLOUD_NAME && CLOUDINARY_UPLOAD_PRESET) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+        const endpoint = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+        const response = await fetch(endpoint, {
+            method: "POST",
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error("Cloudinary-তে ছবি আপলোড করা যায়নি।");
+        }
+
+        const result = await response.json();
+        if (result && result.secure_url) {
+            return result.secure_url;
+        }
+        throw new Error("Cloudinary থেকে বৈধ URL পাওয়া যায়নি।");
+    }
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth || height > maxHeight) {
+                    const ratio = Math.min(maxWidth / width, maxHeight / height);
+                    width = Math.round(width * ratio);
+                    height = Math.round(height * ratio);
+                }
+
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext("2d");
+                ctx.drawImage(img, 0, 0, width, height);
+
+                resolve(canvas.toDataURL("image/jpeg", quality));
+            };
+            img.onerror = () => resolve(e.target.result);
+            img.src = e.target.result;
+        };
+        reader.onerror = () => reject(new Error("ফাইল পড়তে সমস্যা হয়েছে।"));
+        reader.readAsDataURL(file);
+    });
 }
 
-function handleAddProduct(e) {
+async function handleAddProduct(e) {
     e.preventDefault();
     const fileInput = document.getElementById('pImgFile');
     const isFeaturedChecked = document.getElementById('pIsFeatured').checked;
-    
-    convertFileToBase64(fileInput, (base64Img) => {
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading...";
+        }
+
+        const imgUrl = await uploadImageSmart(fileInput, 600, 600, 0.78);
         const newProd = {
             id: Date.now(),
             name: document.getElementById('pName').value,
             price: Number(document.getElementById('pPrice').value),
-            img: base64Img,
+            img: imgUrl,
             category: document.getElementById('pCat').value,
             size: document.getElementById('pSize').value,
             desc: document.getElementById('pDesc').value,
             isFeatured: isFeaturedChecked
         };
+
         products.push(newProd);
-        localStorage.setItem('store_products', JSON.stringify(products));
-        renderProducts();
-        renderAdminProductList();
-        renderAdminAnalytics();
-        alert("Product added successfully!");
-        e.target.reset();
+        if (safeSaveStorage('store_products', products)) {
+            renderProducts();
+            renderAdminProductList();
+            renderAdminAnalytics();
+            alert("Product added successfully!");
+            e.target.reset();
+        }
+    } catch (err) {
+        alert(err.message || "Product যোগ করতে সমস্যা হয়েছে।");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Save Product";
+        }
+    }
+}
+
+function updateSelectedCountLabel() {
+    const countEl = document.getElementById('selectedProductCount');
+    if (countEl) countEl.innerText = selectedProductIds.size;
+}
+
+function toggleProductSelection(id, checked) {
+    if (checked) {
+        selectedProductIds.add(id);
+    } else {
+        selectedProductIds.delete(id);
+    }
+    updateSelectedCountLabel();
+}
+
+function toggleSelectAllProducts(checked) {
+    const searchVal = (document.getElementById('adminProdSearch')?.value || "").toLowerCase();
+    const visibleList = products.filter(p =>
+        p.name.toLowerCase().includes(searchVal) || p.category.toLowerCase().includes(searchVal)
+    );
+    if (checked) {
+        visibleList.forEach(p => selectedProductIds.add(p.id));
+    } else {
+        visibleList.forEach(p => selectedProductIds.delete(p.id));
+    }
+    renderAdminProductList();
+}
+
+function bulkToggleFeature(makeFeatured) {
+    if (selectedProductIds.size === 0) {
+        alert("আগে অন্তত ১টি প্রোডাক্ট সিলেক্ট করুন।");
+        return;
+    }
+    products = products.map(p => {
+        if (selectedProductIds.has(p.id)) {
+            return { ...p, isFeatured: makeFeatured };
+        }
+        return p;
     });
+    safeSaveStorage('store_products', products);
+    renderProducts();
+    renderAdminProductList();
+    alert(makeFeatured ? "সিলেক্ট করা প্রোডাক্টগুলো Featured করা হয়েছে।" : "সিলেক্ট করা প্রোডাক্টগুলো Featured থেকে সরানো হয়েছে।");
+}
+
+function bulkDeleteProducts() {
+    if (selectedProductIds.size === 0) {
+        alert("আগে অন্তত ১টি প্রোডাক্ট সিলেক্ট করুন।");
+        return;
+    }
+    if (!confirm(`আপনি কি ${selectedProductIds.size}টি প্রোডাক্ট একসাথে ডিলিট করতে চান?`)) {
+        return;
+    }
+    products = products.filter(p => !selectedProductIds.has(p.id));
+    selectedProductIds.clear();
+    safeSaveStorage('store_products', products);
+    renderProducts();
+    renderAdminProductList();
+    renderAdminAnalytics();
+    alert("সিলেক্ট করা প্রোডাক্টগুলো ডিলিট করা হয়েছে।");
 }
 
 function renderAdminProductList() {
     const container = document.getElementById('adminProductList');
-    if(!container) return;
-    container.innerHTML = products.map(p => `
-        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px; border-bottom:1px solid #ddd;">
-            <div>
-                <strong>${p.name}</strong> (${p.category}) - ৳${p.price}
-                <br><span style="font-size:11px; color:${p.isFeatured ? 'green' : 'gray'};">${p.isFeatured ? '⭐ Featured' : 'Not Featured'}</span>
+    if (!container) return;
+
+    const searchVal = (document.getElementById('adminProdSearch')?.value || "").toLowerCase();
+    const filtered = products.filter(p =>
+        p.name.toLowerCase().includes(searchVal) || p.category.toLowerCase().includes(searchVal)
+    );
+
+    updateSelectedCountLabel();
+
+    if (filtered.length === 0) {
+        container.innerHTML = "<p style='color:#777; font-size:13px;'>No matching products found.</p>";
+        return;
+    }
+
+    container.innerHTML = filtered.map(p => `
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #ddd;">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <input type="checkbox" ${selectedProductIds.has(p.id) ? 'checked' : ''} onchange="toggleProductSelection(${p.id}, this.checked)" style="width:16px; height:16px; cursor:pointer;">
+                <div>
+                    <strong>${p.name}</strong> (${p.category}) - ৳${p.price}
+                    <br><span style="font-size:11px; color:${p.isFeatured ? 'green' : 'gray'};">${p.isFeatured ? '⭐ Featured' : 'Not Featured'}</span>
+                </div>
             </div>
             <div style="display:flex; gap:8px;">
                 <button onclick="toggleFeature(${p.id})" style="background:${p.isFeatured ? '#f39c12' : '#27ae60'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
@@ -740,9 +905,9 @@ function renderAdminProductList() {
 
 function toggleFeature(id) {
     const p = products.find(prod => prod.id === id);
-    if(p) {
+    if (p) {
         p.isFeatured = !p.isFeatured;
-        localStorage.setItem('store_products', JSON.stringify(products));
+        safeSaveStorage('store_products', products);
         renderProducts();
         renderAdminProductList();
     }
@@ -750,33 +915,65 @@ function toggleFeature(id) {
 
 function deleteProduct(id) {
     products = products.filter(p => p.id !== id);
-    localStorage.setItem('store_products', JSON.stringify(products));
+    selectedProductIds.delete(id);
+    safeSaveStorage('store_products', products);
     renderProducts();
     renderAdminProductList();
     renderAdminAnalytics();
 }
 
-function handleAddBanner(e) {
+async function handleAddBanner(e) {
     e.preventDefault();
     const fileInput = document.getElementById('bImgFile');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
 
-    convertFileToBase64(fileInput, (base64Img) => {
-        banners.push(base64Img);
-        localStorage.setItem('store_banners', JSON.stringify(banners));
-        renderBanners();
-        renderAdminBannerList();
-        startSlider();
-        alert("Banner slide added successfully!");
-        e.target.reset();
-    });
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading Banner...";
+        }
+
+        const bannerUrl = await uploadImageSmart(fileInput, 1100, 420, 0.72);
+        banners.push(bannerUrl);
+        if (safeSaveStorage('store_banners', banners)) {
+            renderBanners();
+            renderAdminBannerList();
+            renderAdminAnalytics();
+            startSlider();
+            alert("Banner slide added successfully!");
+            e.target.reset();
+        } else {
+            banners.pop();
+        }
+    } catch (err) {
+        alert(err.message || "Banner যোগ করতে সমস্যা হয়েছে।");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Add Banner Slide";
+        }
+    }
+}
+
+function resetDefaultBanners() {
+    banners = [...defaultBanners];
+    safeSaveStorage('store_banners', banners);
+    renderBanners();
+    renderAdminBannerList();
+    renderAdminAnalytics();
+    startSlider();
+    alert("Default banners restored.");
 }
 
 function renderAdminBannerList() {
     const container = document.getElementById('bannerListAdmin');
-    if(!container) return;
+    if (!container) return;
     container.innerHTML = banners.map((b, idx) => `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-            <span style="font-size:12px;">Banner #${idx + 1}</span>
+        <div class="banner-admin-row">
+            <div style="display:flex; align-items:center; gap:10px;">
+                <img src="${b}" class="banner-admin-thumb" alt="Banner ${idx + 1}">
+                <span style="font-size:12px; font-weight:600;">Banner #${idx + 1}</span>
+            </div>
             <button onclick="deleteBanner(${idx})" style="color:red; border:none; background:none; cursor:pointer; font-weight:bold;">Delete</button>
         </div>
     `).join('');
@@ -784,23 +981,41 @@ function renderAdminBannerList() {
 
 function deleteBanner(idx) {
     banners.splice(idx, 1);
-    localStorage.setItem('store_banners', JSON.stringify(banners));
+    if (banners.length === 0) {
+        banners = [...defaultBanners];
+    }
+    safeSaveStorage('store_banners', banners);
     renderBanners();
     renderAdminBannerList();
+    renderAdminAnalytics();
     startSlider();
 }
 
-function handleUpdateLogo(e) {
+async function handleUpdateLogo(e) {
     e.preventDefault();
     const fileInput = document.getElementById('logoFile');
+    const submitBtn = e.target.querySelector('button[type="submit"]');
 
-    convertFileToBase64(fileInput, (base64Img) => {
-        siteLogo = base64Img;
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Uploading Logo...";
+        }
+
+        const logoUrl = await uploadImageSmart(fileInput, 200, 200, 0.85);
+        siteLogo = logoUrl;
         localStorage.setItem('site_logo', siteLogo);
         renderLogo();
         alert("Website logo updated successfully!");
         e.target.reset();
-    });
+    } catch (err) {
+        alert(err.message || "Logo আপডেট করতে সমস্যা হয়েছে।");
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Update Website Logo";
+        }
+    }
 }
 
 function handleRemoveLogo() {
