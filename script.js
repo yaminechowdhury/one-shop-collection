@@ -1665,3 +1665,40 @@ function handleRemoveLogo() {
     renderLogo();
     alert("Logo removed.");
 }
+
+function forceFixSaveProductButton() {
+    const pSizeEl = document.getElementById('pSize');
+    if (pSizeEl) {
+        pSizeEl.required = false;
+        pSizeEl.removeAttribute('required');
+        pSizeEl.style.display = 'none';
+    }
+
+    const formEl =
+        document.getElementById('pName')?.closest('form') ||
+        document.querySelector('#adminAddProduct form');
+
+    if (formEl) {
+        formEl.setAttribute('novalidate', 'true');
+        formEl.onsubmit = function(ev) {
+            ev.preventDefault();
+            handleAddProduct(ev);
+            return false;
+        };
+    }
+
+    const allButtons = Array.from(document.querySelectorAll('button'));
+    const saveBtn = allButtons.find(b => (b.innerText || '').trim().toLowerCase() === 'save product');
+    if (saveBtn) {
+        saveBtn.type = 'button';
+        saveBtn.onclick = function(ev) {
+            ev.preventDefault();
+            handleAddProduct(ev);
+        };
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    forceFixSaveProductButton();
+    setInterval(forceFixSaveProductButton, 1500);
+});
