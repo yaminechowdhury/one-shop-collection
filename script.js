@@ -316,6 +316,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 closeCategoryPopup();
             }
         }
+
+        const btn = e.target.closest("button");
+        if (btn) {
+            const txt = (btn.innerText || "").trim().toLowerCase();
+            if (txt === "save product" && btn.type !== "submit") {
+                handleAddProduct(e);
+            }
+        }
     });
 });
 
@@ -1128,14 +1136,31 @@ async function uploadImageSmart(fileInput, maxWidth, maxHeight, quality) {
 }
 
 async function handleAddProduct(e) {
-    e.preventDefault();
+    if (e && typeof e.preventDefault === "function") {
+        e.preventDefault();
+    }
+
+    const formEl = (e && e.target && e.target.tagName === "FORM")
+        ? e.target
+        : document.getElementById('addProductForm') || document.querySelector('#adminAddProduct form') || document.getElementById('pName')?.closest('form');
+
+    const nameVal = (document.getElementById('pName')?.value || "").trim();
+    const priceVal = Number(document.getElementById('pPrice')?.value || 0);
+    const catVal = document.getElementById('pCat')?.value || categoriesList[0];
+    const descVal = (document.getElementById('pDesc')?.value || "").trim();
     const fileInput = document.getElementById('pImgFile');
-    const isFeaturedChecked = document.getElementById('pIsFeatured').checked;
-    const submitBtn = e.target.querySelector('button[type="submit"]');
+    const isFeaturedChecked = Boolean(document.getElementById('pIsFeatured')?.checked);
+    const submitBtn = formEl?.querySelector('button[type="submit"]') || document.querySelector('#adminAddProduct button');
+
+    if (!nameVal || !priceVal) {
+        alert("Product Name এবং Price সঠিকভাবে দিন।");
+        return;
+    }
 
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
+            submitBtn.dataset.origText = submitBtn.innerText;
             submitBtn.innerText = "Uploading...";
         }
 
@@ -1146,38 +1171,44 @@ async function handleAddProduct(e) {
 
         const newProd = {
             id: Date.now(),
-            name: document.getElementById('pName').value,
-            price: Number(document.getElementById('pPrice').value),
+            name: nameVal,
+            price: priceVal,
             img: imgUrl,
-            category: document.getElementById('pCat').value,
+            category: catVal,
             size: chosenSizes,
-            desc: document.getElementById('pDesc').value,
+            desc: descVal,
             isFeatured: isFeaturedChecked,
             isStockOut: false
         };
 
-        await sbRequest("products", {
-            method: "POST",
-            headers: { "Prefer": "return=minimal" },
-            body: JSON.stringify(toDbProduct(newProd))
-        });
+        try {
+            await sbRequest("products", {
+                method: "POST",
+                headers: { "Prefer": "return=minimal" },
+                body: JSON.stringify(toDbProduct(newProd))
+            });
+        } catch (sbErr) {
+            console.warn("Supabase insert warning:", sbErr.message);
+            alert("লোকালি সেভ হচ্ছে, কিন্তু Supabase-এ সেভ হতে সমস্যা: " + sbErr.message);
+        }
 
         products.push(newProd);
         safeSaveStorage('store_products', products);
         renderProducts();
         renderAdminProductList();
         renderAdminAnalytics();
-        showSyncNotice("Product saved to Supabase!");
-        alert("Product added & synced to Supabase!");
-        e.target.reset();
+        showSyncNotice("Product saved!");
+        alert("Product added successfully!");
+
+        if (formEl) formEl.reset();
         switchSizePickerGroup('addProd', 'letter');
     } catch (err) {
-        showSyncNotice(`Add Product Error: ${err.message}`, true);
-        alert("সমস্যা হয়েছে: " + (err.message || "Product যোগ করা যায়নি।"));
+        console.error("Save product error:", err);
+        alert("Save Product Error: " + (err?.message || err));
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerText = "Save Product";
+            submitBtn.innerText = submitBtn.dataset.origText || "Save Product";
         }
     }
 }
