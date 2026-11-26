@@ -24,12 +24,12 @@ const defaultBanners = [
 const placeholderSlotImg = "https://via.placeholder.com/120x120?text=Select+Item";
 
 const starterProducts = [
-    { id: 1, name: "Casual Denim Shirt", price: 1200, category: "Shirt", size: "M, L, XL", description: "100% pure cotton shirt", img: "https://picsum.photos/300/300?random=1", is_featured: true },
-    { id: 2, name: "Premium Polo T-Shirt", price: 650, category: "T Shirt", size: "L, XL", description: "Comfortable daily wear", img: "https://picsum.photos/300/300?random=2", is_featured: true },
-    { id: 3, name: "Slim Fit Jeans", price: 1500, category: "Jeans", size: "30, 32, 34", description: "Stretchable denim", img: "https://picsum.photos/300/300?random=3", is_featured: true },
-    { id: 4, name: "Katan Saree", price: 3500, category: "Saree", size: "Free Size", description: "Traditional party wear", img: "https://picsum.photos/300/300?random=4", is_featured: true },
-    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "Adjustable", description: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", is_featured: false },
-    { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", description: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", is_featured: false }
+    { id: 1, name: "Casual Denim Shirt", price: 1200, category: "Shirt", size: "M, L, XL", description: "100% pure cotton shirt", img: "https://picsum.photos/300/300?random=1", is_featured: true, is_stock_out: false },
+    { id: 2, name: "Premium Polo T-Shirt", price: 650, category: "T Shirt", size: "L, XL", description: "Comfortable daily wear", img: "https://picsum.photos/300/300?random=2", is_featured: true, is_stock_out: false },
+    { id: 3, name: "Slim Fit Jeans", price: 1500, category: "Jeans", size: "30, 32, 34", description: "Stretchable denim", img: "https://picsum.photos/300/300?random=3", is_featured: true, is_stock_out: false },
+    { id: 4, name: "Katan Saree", price: 3500, category: "Saree", size: "Free Size", description: "Traditional party wear", img: "https://picsum.photos/300/300?random=4", is_featured: true, is_stock_out: false },
+    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "Free Size", description: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", is_featured: false, is_stock_out: false },
+    { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", description: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", is_featured: false, is_stock_out: false }
 ];
 
 function normalizeProduct(row) {
@@ -38,10 +38,11 @@ function normalizeProduct(row) {
         name: row.name,
         price: Number(row.price),
         category: row.category,
-        size: row.size,
+        size: row.size || "Free Size",
         desc: row.description ?? row.desc ?? "",
         img: row.img,
-        isFeatured: Boolean(row.is_featured ?? row.isFeatured)
+        isFeatured: Boolean(row.is_featured ?? row.isFeatured),
+        isStockOut: Boolean(row.is_stock_out ?? row.isStockOut)
     };
 }
 
@@ -51,10 +52,11 @@ function toDbProduct(prod) {
         name: prod.name,
         price: Number(prod.price),
         category: prod.category,
-        size: prod.size,
+        size: prod.size || "Free Size",
         description: prod.desc ?? prod.description ?? "",
         img: prod.img,
-        is_featured: Boolean(prod.isFeatured ?? prod.is_featured)
+        is_featured: Boolean(prod.isFeatured ?? prod.is_featured),
+        is_stock_out: Boolean(prod.isStockOut ?? prod.is_stock_out)
     };
 }
 
@@ -92,6 +94,7 @@ let slideIndex = 0;
 let slideInterval;
 let activeCombo = null;
 let currentStylePersona = "men";
+let editingProductId = null;
 
 function safeSaveStorage(key, value) {
     try {
@@ -206,13 +209,15 @@ function renderCategories() {
 function renderLogo() {
     const logoImg = document.getElementById('headerLogoImg');
     const shopTitle = document.getElementById('headerShopTitle');
-    shopTitle.style.display = "block";
+    if (shopTitle) shopTitle.style.display = "block";
 
-    if (siteLogo && siteLogo.trim() !== "") {
-        logoImg.src = siteLogo;
-        logoImg.style.display = "block";
-    } else {
-        logoImg.style.display = "none";
+    if (logoImg) {
+        if (siteLogo && siteLogo.trim() !== "") {
+            logoImg.src = siteLogo;
+            logoImg.style.display = "block";
+        } else {
+            logoImg.style.display = "none";
+        }
     }
 }
 
@@ -251,11 +256,11 @@ function showView(viewName) {
 function toggleCategoryPopup(e) {
     e.preventDefault();
     e.stopPropagation();
-    document.getElementById('categoryPopup').classList.toggle('show');
+    document.getElementById('categoryPopup')?.classList.toggle('show');
 }
 
 function openCategoryPopupFromPage() {
-    document.getElementById('categoryPopup').classList.add('show');
+    document.getElementById('categoryPopup')?.classList.add('show');
 }
 
 function closeCategoryPopup() {
@@ -265,15 +270,17 @@ function closeCategoryPopup() {
 
 function filterCategory(catName) {
     showView('category');
-    document.getElementById('categoryTitle').innerText = "Category: " + catName;
+    const titleEl = document.getElementById('categoryTitle');
+    if (titleEl) titleEl.innerText = "Category: " + catName;
     const filtered = products.filter(p => p.category.toLowerCase() === catName.toLowerCase());
     renderGrid('categoryGrid', filtered);
 }
 
 function handleSearch() {
-    const query = document.getElementById('searchInput').value.toLowerCase();
+    const query = (document.getElementById('searchInput')?.value || "").toLowerCase();
     showView('category');
-    document.getElementById('categoryTitle').innerText = `Search Results: "${query}"`;
+    const titleEl = document.getElementById('categoryTitle');
+    if (titleEl) titleEl.innerText = `Search Results: "${query}"`;
     const filtered = products.filter(p => p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query));
     renderGrid('categoryGrid', filtered);
 }
@@ -291,6 +298,11 @@ function renderProducts() {
     setupComboDropdowns();
 }
 
+function isFreeSizeValue(sizeStr) {
+    const clean = (sizeStr || "").trim().toLowerCase();
+    return !clean || clean === "free size" || clean === "free" || clean.includes("free size");
+}
+
 function renderGrid(containerId, list) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -298,19 +310,43 @@ function renderGrid(containerId, list) {
         container.innerHTML = "<p>No products found in this category yet.</p>";
         return;
     }
-    container.innerHTML = list.map(p => `
-        <div class="product-card">
-            <img src="${p.img}" alt="${p.name}">
-            <h3>${p.name}</h3>
-            <div class="price">৳${p.price}</div>
-            <div class="details">${p.desc}</div>
-            <div class="size">Size: ${p.size} | Cat: ${p.category}</div>
-            <div class="card-actions">
-                <button class="btn-add-cart" onclick="addToCart(${p.id})">Add to Cart</button>
-                <button class="btn-wishlist" onclick="addToWishlist(${p.id})"><i class="fa-solid fa-heart"></i></button>
+
+    container.innerHTML = list.map(p => {
+        const freeSize = isFreeSizeValue(p.size);
+        const sizeChoices = p.size.split(',').map(s => s.trim()).filter(Boolean);
+        const isStockOut = Boolean(p.isStockOut);
+
+        let sizeSelectorHtml = "";
+        if (!freeSize && sizeChoices.length > 0) {
+            sizeSelectorHtml = `
+                <div style="margin:6px 0;">
+                    <label style="font-size:11px; font-weight:600; color:#334155;">Size:</label>
+                    <select id="cardSize_${containerId}_${p.id}" style="width:100%; padding:4px 6px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; margin-top:2px;">
+                        ${sizeChoices.map(sz => `<option value="${sz}">${sz}</option>`).join('')}
+                    </select>
+                </div>
+            `;
+        } else {
+            sizeSelectorHtml = `<div class="size">Size: Free Size</div>`;
+        }
+
+        return `
+            <div class="product-card" style="position:relative;">
+                ${isStockOut ? `<span style="position:absolute; top:8px; right:8px; background:#dc2626; color:#fff; font-size:11px; font-weight:bold; padding:3px 8px; border-radius:999px; z-index:2;">Stock Out</span>` : ''}
+                <img src="${p.img}" alt="${p.name}" style="${isStockOut ? 'opacity:0.55; filter:grayscale(35%);' : ''}">
+                <h3>${p.name}</h3>
+                <div class="price">৳${p.price}</div>
+                <div class="details">${p.desc}</div>
+                ${sizeSelectorHtml}
+                <div class="card-actions">
+                    <button class="btn-add-cart" ${isStockOut ? 'disabled style="background:#94a3b8; cursor:not-allowed;"' : `onclick="addToCart(${p.id}, '${containerId}')"`}>
+                        ${isStockOut ? 'Stock Out' : 'Add to Cart'}
+                    </button>
+                    <button class="btn-wishlist" onclick="addToWishlist(${p.id})"><i class="fa-solid fa-heart"></i></button>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `;
+    }).join('');
 }
 
 function setStylePersona(persona) {
@@ -451,14 +487,17 @@ async function generateCombinedOutfitPreview() {
 }
 
 function calculateComboTotal() {
-    const id1 = Number(document.getElementById('comboItem1').value);
-    const id2 = Number(document.getElementById('comboItem2').value);
-    const id3 = Number(document.getElementById('comboItem3').value);
+    const id1 = Number(document.getElementById('comboItem1')?.value);
+    const id2 = Number(document.getElementById('comboItem2')?.value);
+    const id3 = Number(document.getElementById('comboItem3')?.value);
 
     if (!id1 || !id2 || !id3) {
-        document.getElementById('comboSummaryText').innerText = "Select 3 items to build your custom outfit.";
-        document.getElementById('comboOrigPrice').innerText = "৳0";
-        document.getElementById('comboDiscPrice').innerText = "৳0";
+        const sumEl = document.getElementById('comboSummaryText');
+        const origEl = document.getElementById('comboOrigPrice');
+        const discEl = document.getElementById('comboDiscPrice');
+        if (sumEl) sumEl.innerText = "Select 3 items to build your custom outfit.";
+        if (origEl) origEl.innerText = "৳0";
+        if (discEl) discEl.innerText = "৳0";
         activeCombo = null;
         return;
     }
@@ -472,7 +511,8 @@ function calculateComboTotal() {
 
     activeCombo = {
         name: `Custom Combo Pack (${p1.name} + ${p2.name} + ${p3.name})`,
-        price: discTotal
+        price: discTotal,
+        selectedSize: "Custom Combo"
     };
 
     document.getElementById('comboSummaryText').innerText = `${p1.name} + ${p2.name} + ${p3.name}`;
@@ -488,7 +528,8 @@ function addComboToCart() {
     cart.push({
         id: Date.now(),
         name: activeCombo.name,
-        price: activeCombo.price
+        price: activeCombo.price,
+        selectedSize: activeCombo.selectedSize || "Free Size"
     });
     updateHeaderCounters();
     renderCartModal();
@@ -569,22 +610,39 @@ function handleTrackOrder() {
                 <p><strong>Customer Name:</strong> ${o.name}</p>
                 <p><strong>Address:</strong> ${o.address || 'N/A'}</p>
                 <p><strong>Total Amount:</strong> ৳${o.total}</p>
-                <p><strong>Status:</strong> <span style="color:green; font-weight:bold;">${o.status}</span></p>
+                <p><strong>Status:</strong> <span style="color:${o.status === 'Cancelled' ? 'red' : 'green'}; font-weight:bold;">${o.status}</span></p>
             </div>
         `).join('');
     }
 }
 
-function addToCart(id) {
+function addToCart(id, containerId = "") {
     const p = products.find(prod => prod.id === id);
-    cart.push(p);
+    if (!p) return;
+    if (p.isStockOut) {
+        alert("এই প্রোডাক্টটি বর্তমানে Stock Out রয়েছে।");
+        return;
+    }
+
+    let chosenSize = "Free Size";
+    if (!isFreeSizeValue(p.size)) {
+        const selEl = containerId ? document.getElementById(`cardSize_${containerId}_${id}`) : null;
+        chosenSize = selEl ? selEl.value : (p.size.split(',')[0]?.trim() || "Free Size");
+    }
+
+    cart.push({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        selectedSize: chosenSize
+    });
     updateHeaderCounters();
     renderCartModal();
 }
 
 function addToWishlist(id) {
     const p = products.find(prod => prod.id === id);
-    if (!wishlist.some(w => w.id === id)) wishlist.push(p);
+    if (p && !wishlist.some(w => w.id === id)) wishlist.push(p);
     updateHeaderCounters();
     renderWishlistModal();
 }
@@ -592,7 +650,7 @@ function addToWishlist(id) {
 function updateHeaderCounters() {
     document.getElementById('cartCount').innerText = cart.length;
     document.getElementById('wishlistCount').innerText = wishlist.length;
-    
+
     const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
     const deliveryFee = cart.length > 0 ? Number(document.getElementById('deliveryArea').value) : 0;
     const grandTotal = subtotal + deliveryFee;
@@ -605,12 +663,13 @@ function updateHeaderCounters() {
 
 function renderCartModal() {
     const container = document.getElementById('cartItemsList');
+    if (!container) return;
     if (cart.length === 0) {
         container.innerHTML = "<p style='color:#777; text-align:center;'>Your cart is empty.</p>";
     } else {
         container.innerHTML = cart.map((item, idx) => `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
-                <span style="font-size:13px;">${item.name}</span>
+                <span style="font-size:13px;">${item.name} <strong style="color:#1d4ed8;">(${item.selectedSize || 'Free Size'})</strong></span>
                 <span style="font-size:13px; font-weight:bold;">৳${item.price} <button onclick="removeFromCart(${idx})" style="color:red; background:none; border:none; cursor:pointer; margin-left:5px; font-size:15px;">&times;</button></span>
             </div>
         `).join('');
@@ -626,7 +685,8 @@ function removeFromCart(index) {
 
 function renderWishlistModal() {
     const container = document.getElementById('wishlistItemsList');
-    container.innerHTML = wishlist.map((item, idx) => `
+    if (!container) return;
+    container.innerHTML = wishlist.map(item => `
         <div style="display:flex; justify-content:space-between; margin-bottom:10px; align-items:center;">
             <span style="font-size:13px;">${item.name} (৳${item.price})</span>
             <button onclick="addToCart(${item.id})" style="background:#1a365d; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Add Cart</button>
@@ -640,13 +700,13 @@ function handleOrderConfirm(e) {
         alert("Your cart is empty!");
         return;
     }
-    
+
     const name = document.getElementById('custName').value;
     const phone = document.getElementById('custPhone').value;
     const address = document.getElementById('custAddress').value;
     const deliveryAreaSelect = document.getElementById('deliveryArea');
     const areaText = deliveryAreaSelect.options[deliveryAreaSelect.selectedIndex].text;
-    
+
     const subtotal = cart.reduce((sum, item) => sum + item.price, 0);
     const deliveryFee = Number(deliveryAreaSelect.value);
     const totalAmount = subtotal + deliveryFee;
@@ -690,7 +750,7 @@ function generateInvoiceSlip(order, areaText) {
         <p><strong>Delivery Zone:</strong> ${areaText}</p>
         <hr style="margin: 10px 0; border-top: 1px solid #ccc;">
         <p><strong>Items Ordered:</strong></p>
-        ${order.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:12px;"><span>- ${i.name}</span><span>৳${i.price}</span></div>`).join('')}
+        ${order.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:12px;"><span>- ${i.name} (${i.selectedSize || 'Free Size'})</span><span>৳${i.price}</span></div>`).join('')}
         <hr style="margin: 10px 0; border-top: 1px dashed #333;">
         <p style="display:flex; justify-content:space-between;"><span>Subtotal:</span> <span>৳${order.subtotal}</span></p>
         <p style="display:flex; justify-content:space-between;"><span>Delivery Fee:</span> <span>৳${order.deliveryFee}</span></p>
@@ -698,8 +758,8 @@ function generateInvoiceSlip(order, areaText) {
     `;
 }
 
-function openModal(id) { document.getElementById(id).classList.add('show'); }
-function closeModal(id) { document.getElementById(id).classList.remove('show'); }
+function openModal(id) { document.getElementById(id)?.classList.add('show'); }
+function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }
 
 let isLoginMode = true;
 function openAuthModal() { openModal('authModal'); }
@@ -708,10 +768,10 @@ function switchAuthTab(type) {
     isLoginMode = (type === 'login');
     document.getElementById('loginTabBtn').classList.toggle('active', isLoginMode);
     document.getElementById('regTabBtn').classList.toggle('active', !isLoginMode);
-    
+
     document.getElementById('regNameInput').style.display = isLoginMode ? 'none' : 'block';
     document.getElementById('regNameInput').required = !isLoginMode;
-    
+
     document.getElementById('authSubmitBtn').innerText = isLoginMode ? 'Login' : 'Register';
 }
 
@@ -719,7 +779,7 @@ function handleAuthSubmit(e) {
     e.preventDefault();
     const phone = document.getElementById('authPhone').value;
     const name = document.getElementById('regNameInput').value;
-    
+
     document.getElementById('userLabel').innerText = isLoginMode ? phone : name;
     closeModal('authModal');
     alert(isLoginMode ? "Login successful!" : `Welcome ${name}, registration successful!`);
@@ -754,7 +814,7 @@ function switchAdminTab(tabId, ev) {
 }
 
 function renderAdminAnalytics() {
-    const totalRev = orders.reduce((sum, o) => sum + o.total, 0);
+    const totalRev = orders.filter(o => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total, 0);
     document.getElementById('statTotalProducts').innerText = products.length;
     document.getElementById('statTotalOrders').innerText = orders.length;
     document.getElementById('statRevenue').innerText = `৳${totalRev}`;
@@ -764,9 +824,9 @@ function renderAdminAnalytics() {
     if (list) {
         list.innerHTML = `
             <li>Total Active Products in Catalog: <strong>${products.length}</strong> across 40 Categories.</li>
+            <li>Stock Out Products: <strong>${products.filter(p => p.isStockOut).length}</strong></li>
             <li>Active Banners on Home Slider: <strong>${banners.length}</strong></li>
-            <li>Processing Orders: <strong>${orders.filter(o => o.status === 'Processing').length}</strong></li>
-            <li>Photo-Verified Customer Reviews: <strong>${reviews.filter(r => r.images && r.images.length > 0).length}</strong></li>
+            <li>Processing Orders: <strong>${orders.filter(o => o.status === 'Processing').length}</strong> | Cancelled: <strong>${orders.filter(o => o.status === 'Cancelled').length}</strong></li>
         `;
     }
 }
@@ -785,12 +845,16 @@ function renderAdminOrdersList() {
                 <span style="font-size:12px; font-weight:bold; color:#1a365d;">৳${o.total}</span>
             </div>
             <p style="font-size:12px; color:#555; margin-top:4px;">Phone: ${o.phone} | Address: ${o.address || 'N/A'}</p>
+            <p style="font-size:11px; color:#475569; margin-top:4px;">
+                <strong>Items:</strong> ${o.items.map(i => `${i.name} (${i.selectedSize || 'Free Size'})`).join(', ')}
+            </p>
             <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
-                <span style="font-size:12px;">Status: <strong>${o.status}</strong></span>
+                <span style="font-size:12px;">Status: <strong style="color:${o.status === 'Cancelled' ? '#dc2626' : '#16a34a'};">${o.status}</strong></span>
                 <select onchange="updateOrderStatus(${o.id}, this.value)" style="padding:4px 8px; font-size:12px;">
                     <option value="Processing" ${o.status === 'Processing' ? 'selected' : ''}>Processing</option>
                     <option value="Shipped" ${o.status === 'Shipped' ? 'selected' : ''}>Shipped</option>
                     <option value="Delivered" ${o.status === 'Delivered' ? 'selected' : ''}>Delivered</option>
+                    <option value="Cancelled" ${o.status === 'Cancelled' ? 'selected' : ''}>Cancelled</option>
                 </select>
             </div>
         </div>
@@ -884,9 +948,10 @@ async function handleAddProduct(e) {
             price: Number(document.getElementById('pPrice').value),
             img: imgUrl,
             category: document.getElementById('pCat').value,
-            size: document.getElementById('pSize').value,
+            size: document.getElementById('pSize').value || "Free Size",
             desc: document.getElementById('pDesc').value,
-            isFeatured: isFeaturedChecked
+            isFeatured: isFeaturedChecked,
+            isStockOut: false
         };
 
         await sbRequest("products", {
@@ -1008,15 +1073,22 @@ function renderAdminProductList() {
     }
 
     container.innerHTML = filtered.map(p => `
-        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #ddd;">
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; padding:8px; border-bottom:1px solid #ddd; background:${p.isStockOut ? '#fef2f2' : 'transparent'};">
             <div style="display:flex; align-items:center; gap:10px;">
                 <input type="checkbox" ${selectedProductIds.has(p.id) ? 'checked' : ''} onchange="toggleProductSelection(${p.id}, this.checked)" style="width:16px; height:16px; cursor:pointer;">
                 <div>
                     <strong>${p.name}</strong> (${p.category}) - ৳${p.price}
-                    <br><span style="font-size:11px; color:${p.isFeatured ? 'green' : 'gray'};">${p.isFeatured ? '⭐ Featured' : 'Not Featured'}</span>
+                    <br><span style="font-size:11px; color:#475569;">Sizes: ${p.size || 'Free Size'}</span>
+                    <br>
+                    <span style="font-size:11px; color:${p.isFeatured ? 'green' : 'gray'}; margin-right:8px;">${p.isFeatured ? '⭐ Featured' : 'Not Featured'}</span>
+                    <span style="font-size:11px; font-weight:bold; color:${p.isStockOut ? '#dc2626' : '#2563eb'};">${p.isStockOut ? 'Stock Out' : 'In Stock'}</span>
                 </div>
             </div>
-            <div style="display:flex; gap:8px;">
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+                <button onclick="openEditProductModal(${p.id})" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Edit</button>
+                <button onclick="toggleStockOut(${p.id})" style="background:${p.isStockOut ? '#16a34a' : '#dc2626'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+                    ${p.isStockOut ? 'In Stock' : 'Stock Out'}
+                </button>
                 <button onclick="toggleFeature(${p.id})" style="background:${p.isFeatured ? '#f39c12' : '#27ae60'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
                     ${p.isFeatured ? 'Remove Featured' : 'Make Featured'}
                 </button>
@@ -1024,6 +1096,152 @@ function renderAdminProductList() {
             </div>
         </div>
     `).join('');
+}
+
+async function toggleStockOut(id) {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+    const nextVal = !p.isStockOut;
+    try {
+        await sbRequest(`products?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({ is_stock_out: nextVal })
+        });
+    } catch (err) {
+        console.warn("Supabase stock update warning:", err.message);
+    }
+    p.isStockOut = nextVal;
+    safeSaveStorage('store_products', products);
+    renderProducts();
+    renderAdminProductList();
+    renderAdminAnalytics();
+    showSyncNotice(`${p.name}: ${nextVal ? 'Stock Out' : 'In Stock'}`);
+}
+
+function applySizePreset(preset) {
+    const sizeInput = document.getElementById('editPSize');
+    if (sizeInput) sizeInput.value = preset;
+}
+
+function openEditProductModal(id) {
+    const p = products.find(prod => prod.id === id);
+    if (!p) return;
+    editingProductId = id;
+
+    let editModal = document.getElementById('editProductModal');
+    if (!editModal) {
+        const modalDiv = document.createElement('div');
+        modalDiv.id = 'editProductModal';
+        modalDiv.className = 'modal-overlay';
+        modalDiv.innerHTML = `
+            <div class="modal-box" style="max-width:500px; width:92%;">
+                <div class="modal-header">
+                    <h3>Edit Product</h3>
+                    <button type="button" onclick="closeModal('editProductModal')" style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+                </div>
+                <form id="editProductForm" onsubmit="handleSaveEditProduct(event)" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">Name:</label>
+                        <input type="text" id="editPName" required style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">Price (৳):</label>
+                        <input type="number" id="editPPrice" required style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">Category:</label>
+                        <select id="editPCat" style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
+                            ${categoriesList.map(c => `<option value="${c}">${c}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">Size Options:</label>
+                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin:4px 0;">
+                            <button type="button" onclick="applySizePreset('28, 30, 32, 34, 36, 38')" style="padding:3px 7px; font-size:11px; cursor:pointer;">28–38</button>
+                            <button type="button" onclick="applySizePreset('S, M, L, XL, XXL')" style="padding:3px 7px; font-size:11px; cursor:pointer;">S–XXL</button>
+                            <button type="button" onclick="applySizePreset('Free Size')" style="padding:3px 7px; font-size:11px; cursor:pointer;">Free Size</button>
+                        </div>
+                        <input type="text" id="editPSize" required style="width:100%; padding:6px; font-size:13px;">
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">Description:</label>
+                        <textarea id="editPDesc" rows="2" style="width:100%; padding:6px; font-size:13px; margin-top:2px;"></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size:12px; font-weight:bold;">New Picture (Optional):</label>
+                        <input type="file" id="editPImgFile" accept="image/*" style="width:100%; font-size:12px; margin-top:2px;">
+                    </div>
+                    <div style="display:flex; gap:16px; margin-top:4px;">
+                        <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="editPIsFeatured"> Featured</label>
+                        <label style="font-size:13px; cursor:pointer; color:#dc2626; font-weight:600;"><input type="checkbox" id="editPIsStockOut"> Stock Out</label>
+                    </div>
+                    <button type="submit" style="background:#16a34a; color:white; padding:9px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:6px;">Save Changes</button>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modalDiv);
+    }
+
+    document.getElementById('editPName').value = p.name;
+    document.getElementById('editPPrice').value = p.price;
+    document.getElementById('editPCat').value = p.category;
+    document.getElementById('editPSize').value = p.size || "Free Size";
+    document.getElementById('editPDesc').value = p.desc || "";
+    document.getElementById('editPIsFeatured').checked = Boolean(p.isFeatured);
+    document.getElementById('editPIsStockOut').checked = Boolean(p.isStockOut);
+
+    openModal('editProductModal');
+}
+
+async function handleSaveEditProduct(e) {
+    e.preventDefault();
+    const p = products.find(prod => prod.id === editingProductId);
+    if (!p) return;
+
+    const submitBtn = e.target.querySelector('button[type="submit"]');
+    try {
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving...";
+        }
+
+        const fileInput = document.getElementById('editPImgFile');
+        let imgUrl = p.img;
+        if (fileInput && fileInput.files && fileInput.files[0]) {
+            imgUrl = await uploadImageSmart(fileInput, 600, 600, 0.78);
+        }
+
+        p.name = document.getElementById('editPName').value;
+        p.price = Number(document.getElementById('editPPrice').value);
+        p.category = document.getElementById('editPCat').value;
+        p.size = document.getElementById('editPSize').value || "Free Size";
+        p.desc = document.getElementById('editPDesc').value;
+        p.img = imgUrl;
+        p.isFeatured = document.getElementById('editPIsFeatured').checked;
+        p.isStockOut = document.getElementById('editPIsStockOut').checked;
+
+        await sbRequest(`products?id=eq.${p.id}`, {
+            method: "PATCH",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify(toDbProduct(p))
+        });
+
+        safeSaveStorage('store_products', products);
+        renderProducts();
+        renderAdminProductList();
+        renderAdminAnalytics();
+        closeModal('editProductModal');
+        showSyncNotice("Product updated on Supabase!");
+        alert("Product updated successfully!");
+    } catch (err) {
+        alert("Edit Error: " + err.message);
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Save Changes";
+        }
+    }
 }
 
 async function toggleFeature(id) {
