@@ -15,6 +15,12 @@ const categoriesList = [
     "Sandals & Loafers", "Perfume & Attar", "Jewellery", "Kids Wear", "Combo Pack"
 ];
 
+const SIZE_PRESETS = {
+    letter: ["S", "M", "L", "XL", "XXL"],
+    waist: ["28", "30", "32", "34", "36", "38"],
+    free: ["Free Size"]
+};
+
 const defaultBanners = [
     "https://picsum.photos/1200/420?random=10",
     "https://picsum.photos/1200/420?random=11",
@@ -157,8 +163,114 @@ async function syncFromSupabase() {
     }
 }
 
+function detectSizeGroup(sizeStr) {
+    const clean = (sizeStr || "").trim().toLowerCase();
+    if (!clean || clean === "free size" || clean === "free" || clean.includes("free size")) {
+        return "free";
+    }
+    const parts = clean.split(',').map(s => s.trim()).filter(Boolean);
+    if (parts.some(p => SIZE_PRESETS.waist.includes(p))) {
+        return "waist";
+    }
+    return "letter";
+}
+
+function buildSizePickerUI(prefix, initialSizeStr = "S, M, L, XL, XXL") {
+    const group = detectSizeGroup(initialSizeStr);
+    const activeSet = new Set(
+        (initialSizeStr || "")
+            .split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+    );
+
+    return `
+        <div id="${prefix}_sizePickerBox" style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc; margin:6px 0;">
+            <label style="font-size:12px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">Size Option (৩টির যেকোনো ১টি বেছে নিন):</label>
+            <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
+                <button type="button" id="${prefix}_grp_letter" onclick="switchSizePickerGroup('${prefix}', 'letter')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #2563eb; cursor:pointer; background:${group === 'letter' ? '#2563eb' : '#fff'}; color:${group === 'letter' ? '#fff' : '#2563eb'}; font-weight:600;">S, M, L, XL, XXL</button>
+                <button type="button" id="${prefix}_grp_waist" onclick="switchSizePickerGroup('${prefix}', 'waist')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #2563eb; cursor:pointer; background:${group === 'waist' ? '#2563eb' : '#fff'}; color:${group === 'waist' ? '#fff' : '#2563eb'}; font-weight:600;">28, 30, 32, 34, 36, 38</button>
+                <button type="button" id="${prefix}_grp_free" onclick="switchSizePickerGroup('${prefix}', 'free')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #059669; cursor:pointer; background:${group === 'free' ? '#059669' : '#fff'}; color:${group === 'free' ? '#fff' : '#059669'}; font-weight:600;">Free Size</button>
+            </div>
+            <div id="${prefix}_sizeChecks" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                ${renderSizeCheckboxesHtml(prefix, group, activeSet)}
+            </div>
+            <input type="hidden" id="${prefix}_sizeGroupVal" value="${group}">
+        </div>
+    `;
+}
+
+function renderSizeCheckboxesHtml(prefix, group, checkedSet = null) {
+    if (group === "free") {
+        return `<span style="font-size:12px; color:#047857; font-weight:600;">Free Size সিলেক্ট করা আছে — কাস্টমারের কাছে কোনো সাইজ সিলেক্টর দেখাবে না।</span>`;
+    }
+    const list = group === "waist" ? SIZE_PRESETS.waist : SIZE_PRESETS.letter;
+    return list.map(sz => {
+        const isChecked = checkedSet ? checkedSet.has(sz) : true;
+        return `
+            <label style="display:inline-flex; align-items:center; gap:4px; font-size:12px; background:#fff; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; cursor:pointer;">
+                <input type="checkbox" class="${prefix}_sz_cb" value="${sz}" ${isChecked ? 'checked' : ''}>
+                <span>${sz}</span>
+            </label>
+        `;
+    }).join('');
+}
+
+function switchSizePickerGroup(prefix, group) {
+    const grpValEl = document.getElementById(`${prefix}_sizeGroupVal`);
+    const checksEl = document.getElementById(`${prefix}_sizeChecks`);
+    if (grpValEl) grpValEl.value = group;
+
+    const btnLetter = document.getElementById(`${prefix}_grp_letter`);
+    const btnWaist = document.getElementById(`${prefix}_grp_waist`);
+    const btnFree = document.getElementById(`${prefix}_grp_free`);
+
+    if (btnLetter) {
+        btnLetter.style.background = group === "letter" ? "#2563eb" : "#fff";
+        btnLetter.style.color = group === "letter" ? "#fff" : "#2563eb";
+    }
+    if (btnWaist) {
+        btnWaist.style.background = group === "waist" ? "#2563eb" : "#fff";
+        btnWaist.style.color = group === "waist" ? "#fff" : "#2563eb";
+    }
+    if (btnFree) {
+        btnFree.style.background = group === "free" ? "#059669" : "#fff";
+        btnFree.style.color = group === "free" ? "#fff" : "#059669";
+    }
+
+    if (checksEl) {
+        checksEl.innerHTML = renderSizeCheckboxesHtml(prefix, group, null);
+    }
+}
+
+function getSelectedSizeFromPicker(prefix) {
+    const grpValEl = document.getElementById(`${prefix}_sizeGroupVal`);
+    const group = grpValEl ? grpValEl.value : "free";
+    if (group === "free") {
+        return "Free Size";
+    }
+    const checked = Array.from(document.querySelectorAll(`.${prefix}_sz_cb:checked`)).map(cb => cb.value.trim());
+    if (checked.length === 0) {
+        const fallbackList = group === "waist" ? SIZE_PRESETS.waist : SIZE_PRESETS.letter;
+        return fallbackList.join(", ");
+    }
+    return checked.join(", ");
+}
+
+function injectAddProductSizePicker() {
+    const pSizeEl = document.getElementById('pSize');
+    if (!pSizeEl) return;
+    if (document.getElementById('addProd_sizePickerBox')) return;
+
+    const container = document.createElement('div');
+    container.innerHTML = buildSizePickerUI('addProd', pSizeEl.value || "S, M, L, XL, XXL");
+    pSizeEl.style.display = "none";
+    pSizeEl.parentNode.insertBefore(container.firstElementChild, pSizeEl.nextSibling);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     renderCategories();
+    injectAddProductSizePicker();
     renderLogo();
     renderBanners();
     renderProducts();
@@ -321,13 +433,11 @@ function renderGrid(containerId, list) {
             sizeSelectorHtml = `
                 <div style="margin:6px 0;">
                     <label style="font-size:11px; font-weight:600; color:#334155;">Size:</label>
-                    <select id="cardSize_${containerId}_${p.id}" style="width:100%; padding:4px 6px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; margin-top:2px;">
+                    <select id="cardSize_${containerId}_${p.id}" ${isStockOut ? 'disabled' : ''} style="width:100%; padding:4px 6px; font-size:12px; border:1px solid #cbd5e1; border-radius:4px; margin-top:2px;">
                         ${sizeChoices.map(sz => `<option value="${sz}">${sz}</option>`).join('')}
                     </select>
                 </div>
             `;
-        } else {
-            sizeSelectorHtml = `<div class="size">Size: Free Size</div>`;
         }
 
         return `
@@ -512,7 +622,7 @@ function calculateComboTotal() {
     activeCombo = {
         name: `Custom Combo Pack (${p1.name} + ${p2.name} + ${p3.name})`,
         price: discTotal,
-        selectedSize: "Custom Combo"
+        selectedSize: "Free Size"
     };
 
     document.getElementById('comboSummaryText').innerText = `${p1.name} + ${p2.name} + ${p3.name}`;
@@ -758,8 +868,20 @@ function generateInvoiceSlip(order, areaText) {
     `;
 }
 
-function openModal(id) { document.getElementById(id)?.classList.add('show'); }
-function closeModal(id) { document.getElementById(id)?.classList.remove('show'); }
+function openModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('show');
+    el.style.display = "flex";
+    el.style.zIndex = "99999";
+}
+
+function closeModal(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('show');
+    el.style.display = "none";
+}
 
 let isLoginMode = true;
 function openAuthModal() { openModal('authModal'); }
@@ -795,6 +917,7 @@ function verifyAdminPin() {
     if (pin === '239855') {
         closeModal('adminPassModal');
         openModal('adminPanelModal');
+        injectAddProductSizePicker();
         renderAdminProductList();
         renderAdminBannerList();
         renderAdminOrdersList();
@@ -811,6 +934,7 @@ function switchAdminTab(tabId, ev) {
     const targetTab = document.getElementById('admin' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
     if (targetTab) targetTab.classList.add('active');
     if (ev && ev.target) ev.target.classList.add('active');
+    if (tabId === 'addProduct') injectAddProductSizePicker();
 }
 
 function renderAdminAnalytics() {
@@ -942,13 +1066,17 @@ async function handleAddProduct(e) {
         }
 
         const imgUrl = await uploadImageSmart(fileInput, 600, 600, 0.78);
+        const chosenSizes = document.getElementById('addProd_sizePickerBox')
+            ? getSelectedSizeFromPicker('addProd')
+            : (document.getElementById('pSize')?.value || "Free Size");
+
         const newProd = {
             id: Date.now(),
             name: document.getElementById('pName').value,
             price: Number(document.getElementById('pPrice').value),
             img: imgUrl,
             category: document.getElementById('pCat').value,
-            size: document.getElementById('pSize').value || "Free Size",
+            size: chosenSizes,
             desc: document.getElementById('pDesc').value,
             isFeatured: isFeaturedChecked,
             isStockOut: false
@@ -968,6 +1096,7 @@ async function handleAddProduct(e) {
         showSyncNotice("Product saved to Supabase!");
         alert("Product added & synced to Supabase!");
         e.target.reset();
+        switchSizePickerGroup('addProd', 'letter');
     } catch (err) {
         showSyncNotice(`Add Product Error: ${err.message}`, true);
         alert("সমস্যা হয়েছে: " + (err.message || "Product যোগ করা যায়নি।"));
@@ -1085,14 +1214,14 @@ function renderAdminProductList() {
                 </div>
             </div>
             <div style="display:flex; gap:6px; flex-wrap:wrap;">
-                <button onclick="openEditProductModal(${p.id})" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Edit</button>
-                <button onclick="toggleStockOut(${p.id})" style="background:${p.isStockOut ? '#16a34a' : '#dc2626'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+                <button type="button" onclick="openEditProductModal(${p.id})" style="background:#2563eb; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Edit</button>
+                <button type="button" onclick="toggleStockOut(${p.id})" style="background:${p.isStockOut ? '#16a34a' : '#dc2626'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
                     ${p.isStockOut ? 'In Stock' : 'Stock Out'}
                 </button>
-                <button onclick="toggleFeature(${p.id})" style="background:${p.isFeatured ? '#f39c12' : '#27ae60'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+                <button type="button" onclick="toggleFeature(${p.id})" style="background:${p.isFeatured ? '#f39c12' : '#27ae60'}; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
                     ${p.isFeatured ? 'Remove Featured' : 'Make Featured'}
                 </button>
-                <button onclick="deleteProduct(${p.id})" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Delete</button>
+                <button type="button" onclick="deleteProduct(${p.id})" style="background:red; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">Delete</button>
             </div>
         </div>
     `).join('');
@@ -1119,79 +1248,66 @@ async function toggleStockOut(id) {
     showSyncNotice(`${p.name}: ${nextVal ? 'Stock Out' : 'In Stock'}`);
 }
 
-function applySizePreset(preset) {
-    const sizeInput = document.getElementById('editPSize');
-    if (sizeInput) sizeInput.value = preset;
-}
-
 function openEditProductModal(id) {
     const p = products.find(prod => prod.id === id);
     if (!p) return;
     editingProductId = id;
 
     let editModal = document.getElementById('editProductModal');
-    if (!editModal) {
-        const modalDiv = document.createElement('div');
-        modalDiv.id = 'editProductModal';
-        modalDiv.className = 'modal-overlay';
-        modalDiv.innerHTML = `
-            <div class="modal-box" style="max-width:500px; width:92%;">
-                <div class="modal-header">
-                    <h3>Edit Product</h3>
-                    <button type="button" onclick="closeModal('editProductModal')" style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
-                </div>
-                <form id="editProductForm" onsubmit="handleSaveEditProduct(event)" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">Name:</label>
-                        <input type="text" id="editPName" required style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">Price (৳):</label>
-                        <input type="number" id="editPPrice" required style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">Category:</label>
-                        <select id="editPCat" style="width:100%; padding:6px; font-size:13px; margin-top:2px;">
-                            ${categoriesList.map(c => `<option value="${c}">${c}</option>`).join('')}
-                        </select>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">Size Options:</label>
-                        <div style="display:flex; gap:6px; flex-wrap:wrap; margin:4px 0;">
-                            <button type="button" onclick="applySizePreset('28, 30, 32, 34, 36, 38')" style="padding:3px 7px; font-size:11px; cursor:pointer;">28–38</button>
-                            <button type="button" onclick="applySizePreset('S, M, L, XL, XXL')" style="padding:3px 7px; font-size:11px; cursor:pointer;">S–XXL</button>
-                            <button type="button" onclick="applySizePreset('Free Size')" style="padding:3px 7px; font-size:11px; cursor:pointer;">Free Size</button>
-                        </div>
-                        <input type="text" id="editPSize" required style="width:100%; padding:6px; font-size:13px;">
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">Description:</label>
-                        <textarea id="editPDesc" rows="2" style="width:100%; padding:6px; font-size:13px; margin-top:2px;"></textarea>
-                    </div>
-                    <div>
-                        <label style="font-size:12px; font-weight:bold;">New Picture (Optional):</label>
-                        <input type="file" id="editPImgFile" accept="image/*" style="width:100%; font-size:12px; margin-top:2px;">
-                    </div>
-                    <div style="display:flex; gap:16px; margin-top:4px;">
-                        <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="editPIsFeatured"> Featured</label>
-                        <label style="font-size:13px; cursor:pointer; color:#dc2626; font-weight:600;"><input type="checkbox" id="editPIsStockOut"> Stock Out</label>
-                    </div>
-                    <button type="submit" style="background:#16a34a; color:white; padding:9px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:6px;">Save Changes</button>
-                </form>
-            </div>
-        `;
-        document.body.appendChild(modalDiv);
+    if (editModal) {
+        editModal.remove();
     }
+
+    const modalDiv = document.createElement('div');
+    modalDiv.id = 'editProductModal';
+    modalDiv.className = 'modal-overlay show';
+    modalDiv.style.cssText = "position:fixed; inset:0; background:rgba(0,0,0,0.65); display:flex; align-items:center; justify-content:center; z-index:99999;";
+    modalDiv.innerHTML = `
+        <div class="modal-box" style="background:#fff; border-radius:8px; max-width:520px; width:92%; max-height:90vh; overflow-y:auto; box-shadow:0 10px 30px rgba(0,0,0,0.3);">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid #e2e8f0;">
+                <h3 style="margin:0; font-size:16px;">Edit Product</h3>
+                <button type="button" onclick="closeModal('editProductModal')" style="border:none; background:none; font-size:24px; line-height:1; cursor:pointer;">&times;</button>
+            </div>
+            <form id="editProductForm" onsubmit="handleSaveEditProduct(event)" style="padding:15px; display:flex; flex-direction:column; gap:10px;">
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">Name:</label>
+                    <input type="text" id="editPName" required style="width:100%; padding:7px; font-size:13px; border:1px solid #cbd5e1; border-radius:4px; margin-top:3px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">Price (৳):</label>
+                    <input type="number" id="editPPrice" required style="width:100%; padding:7px; font-size:13px; border:1px solid #cbd5e1; border-radius:4px; margin-top:3px;">
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">Category:</label>
+                    <select id="editPCat" style="width:100%; padding:7px; font-size:13px; border:1px solid #cbd5e1; border-radius:4px; margin-top:3px;">
+                        ${categoriesList.map(c => `<option value="${c}">${c}</option>`).join('')}
+                    </select>
+                </div>
+                ${buildSizePickerUI('editProd', p.size || "Free Size")}
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">Description:</label>
+                    <textarea id="editPDesc" rows="2" style="width:100%; padding:7px; font-size:13px; border:1px solid #cbd5e1; border-radius:4px; margin-top:3px;"></textarea>
+                </div>
+                <div>
+                    <label style="font-size:12px; font-weight:bold;">New Picture (Optional):</label>
+                    <input type="file" id="editPImgFile" accept="image/*" style="width:100%; font-size:12px; margin-top:3px;">
+                </div>
+                <div style="display:flex; gap:16px; margin-top:4px;">
+                    <label style="font-size:13px; cursor:pointer;"><input type="checkbox" id="editPIsFeatured"> Featured</label>
+                    <label style="font-size:13px; cursor:pointer; color:#dc2626; font-weight:600;"><input type="checkbox" id="editPIsStockOut"> Stock Out</label>
+                </div>
+                <button type="submit" style="background:#16a34a; color:white; padding:9px; border:none; border-radius:4px; font-weight:bold; cursor:pointer; margin-top:6px;">Save Changes</button>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modalDiv);
 
     document.getElementById('editPName').value = p.name;
     document.getElementById('editPPrice').value = p.price;
     document.getElementById('editPCat').value = p.category;
-    document.getElementById('editPSize').value = p.size || "Free Size";
     document.getElementById('editPDesc').value = p.desc || "";
     document.getElementById('editPIsFeatured').checked = Boolean(p.isFeatured);
     document.getElementById('editPIsStockOut').checked = Boolean(p.isStockOut);
-
-    openModal('editProductModal');
 }
 
 async function handleSaveEditProduct(e) {
@@ -1215,7 +1331,7 @@ async function handleSaveEditProduct(e) {
         p.name = document.getElementById('editPName').value;
         p.price = Number(document.getElementById('editPPrice').value);
         p.category = document.getElementById('editPCat').value;
-        p.size = document.getElementById('editPSize').value || "Free Size";
+        p.size = getSelectedSizeFromPicker('editProd');
         p.desc = document.getElementById('editPDesc').value;
         p.img = imgUrl;
         p.isFeatured = document.getElementById('editPIsFeatured').checked;
