@@ -4,6 +4,11 @@ const CLOUDINARY_UPLOAD_PRESET = "oneshop_unsigned";
 const SUPABASE_URL = "https://eqeascdqnzjwqaghmccp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZWFzY2Rxbnpqd3FhZ2htY2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MjcyMzksImV4cCI6MjExMTIwMzIzOX0.hUJtTuTBsxxxlZxkIbpHSqp5W2cchhX_yEa4mDvHWEI";
 
+// চাইলে EmailJS-এর কী বসালে প্রতি অর্ডারে সাথে সাথে ইমেইল/মোবাইল নোটিফিকেশন যাবে
+const EMAILJS_PUBLIC_KEY = "I_xywg1u6Cwdtqppb";
+const EMAILJS_SERVICE_ID = "service_c93tvqo";
+const EMAILJS_TEMPLATE_ID = "template_pp3i4i";
+
 const categoriesList = [
     "Shirt", "T Shirt", "Polo Shirt", "Panabi", "Jeans",
     "Formal Pant", "Cargo Pant", "Gabardine Pant", "Joggers", "Hoodie",
@@ -18,7 +23,8 @@ const categoriesList = [
 const SIZE_PRESETS = {
     letter: ["S", "M", "L", "XL", "XXL"],
     waist: ["28", "30", "32", "34", "36", "38"],
-    free: ["Free Size"]
+    free: ["Free Size"],
+    none: ["No Size"]
 };
 
 const defaultBanners = [
@@ -34,7 +40,7 @@ const starterProducts = [
     { id: 2, name: "Premium Polo T-Shirt", price: 650, category: "T Shirt", size: "L, XL", description: "Comfortable daily wear", img: "https://picsum.photos/300/300?random=2", is_featured: true, is_stock_out: false },
     { id: 3, name: "Slim Fit Jeans", price: 1500, category: "Jeans", size: "30, 32, 34", description: "Stretchable denim", img: "https://picsum.photos/300/300?random=3", is_featured: true, is_stock_out: false },
     { id: 4, name: "Katan Saree", price: 3500, category: "Saree", size: "Free Size", description: "Traditional party wear", img: "https://picsum.photos/300/300?random=4", is_featured: true, is_stock_out: false },
-    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "Free Size", description: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", is_featured: false, is_stock_out: false },
+    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "No Size", description: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", is_featured: false, is_stock_out: false },
     { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", description: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", is_featured: false, is_stock_out: false }
 ];
 
@@ -44,7 +50,7 @@ function normalizeProduct(row) {
         name: row.name,
         price: Number(row.price),
         category: row.category,
-        size: row.size || "Free Size",
+        size: row.size || "No Size",
         desc: row.description ?? row.desc ?? "",
         img: row.img,
         isFeatured: Boolean(row.is_featured ?? row.isFeatured),
@@ -58,7 +64,7 @@ function toDbProduct(prod) {
         name: prod.name,
         price: Number(prod.price),
         category: prod.category,
-        size: prod.size || "Free Size",
+        size: prod.size || "No Size",
         description: prod.desc ?? prod.description ?? "",
         img: prod.img,
         is_featured: Boolean(prod.isFeatured ?? prod.is_featured),
@@ -83,6 +89,14 @@ async function sbRequest(path, options = {}) {
     return text ? JSON.parse(text) : null;
 }
 
+function readOrdersFromStorage() {
+    try {
+        return JSON.parse(localStorage.getItem('store_orders')) || [];
+    } catch (_) {
+        return [];
+    }
+}
+
 let products = (JSON.parse(localStorage.getItem('store_products')) || starterProducts).map(normalizeProduct);
 let banners = JSON.parse(localStorage.getItem('store_banners')) || [...defaultBanners];
 let reviews = JSON.parse(localStorage.getItem('store_reviews')) || [
@@ -90,7 +104,7 @@ let reviews = JSON.parse(localStorage.getItem('store_reviews')) || [
     { name: "Nusrat Jahan", comment: "Saree fabric is really smooth and gorgeous.", fit: "True to Size", images: [] }
 ];
 
-let orders = JSON.parse(localStorage.getItem('store_orders')) || [];
+let orders = readOrdersFromStorage();
 let siteLogo = localStorage.getItem('site_logo') || "";
 
 let cart = [];
@@ -165,7 +179,10 @@ async function syncFromSupabase() {
 
 function detectSizeGroup(sizeStr) {
     const clean = (sizeStr || "").trim().toLowerCase();
-    if (!clean || clean === "free size" || clean === "free" || clean.includes("free size")) {
+    if (!clean || clean === "no size" || clean === "none" || clean.includes("no size")) {
+        return "none";
+    }
+    if (clean === "free size" || clean === "free" || clean.includes("free size")) {
         return "free";
     }
     const parts = clean.split(',').map(s => s.trim()).filter(Boolean);
@@ -186,11 +203,12 @@ function buildSizePickerUI(prefix, initialSizeStr = "S, M, L, XL, XXL") {
 
     return `
         <div id="${prefix}_sizePickerBox" style="border:1px solid #cbd5e1; border-radius:6px; padding:10px; background:#f8fafc; margin:6px 0;">
-            <label style="font-size:12px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">Size Option (৩টির যেকোনো ১টি বেছে নিন):</label>
+            <label style="font-size:12px; font-weight:700; color:#1e293b; display:block; margin-bottom:6px;">Size Option:</label>
             <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px;">
                 <button type="button" id="${prefix}_grp_letter" onclick="switchSizePickerGroup('${prefix}', 'letter')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #2563eb; cursor:pointer; background:${group === 'letter' ? '#2563eb' : '#fff'}; color:${group === 'letter' ? '#fff' : '#2563eb'}; font-weight:600;">S, M, L, XL, XXL</button>
                 <button type="button" id="${prefix}_grp_waist" onclick="switchSizePickerGroup('${prefix}', 'waist')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #2563eb; cursor:pointer; background:${group === 'waist' ? '#2563eb' : '#fff'}; color:${group === 'waist' ? '#fff' : '#2563eb'}; font-weight:600;">28, 30, 32, 34, 36, 38</button>
                 <button type="button" id="${prefix}_grp_free" onclick="switchSizePickerGroup('${prefix}', 'free')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #059669; cursor:pointer; background:${group === 'free' ? '#059669' : '#fff'}; color:${group === 'free' ? '#fff' : '#059669'}; font-weight:600;">Free Size</button>
+                <button type="button" id="${prefix}_grp_none" onclick="switchSizePickerGroup('${prefix}', 'none')" style="padding:5px 9px; font-size:11px; border-radius:4px; border:1px solid #64748b; cursor:pointer; background:${group === 'none' ? '#475569' : '#fff'}; color:${group === 'none' ? '#fff' : '#334155'}; font-weight:600;">No Size</button>
             </div>
             <div id="${prefix}_sizeChecks" style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                 ${renderSizeCheckboxesHtml(prefix, group, activeSet)}
@@ -201,6 +219,9 @@ function buildSizePickerUI(prefix, initialSizeStr = "S, M, L, XL, XXL") {
 }
 
 function renderSizeCheckboxesHtml(prefix, group, checkedSet = null) {
+    if (group === "none") {
+        return `<span style="font-size:12px; color:#475569; font-weight:600;">No Size সিলেক্ট করা আছে — কোনো সাইজ বা অপশন থাকবে না।</span>`;
+    }
     if (group === "free") {
         return `<span style="font-size:12px; color:#047857; font-weight:600;">Free Size সিলেক্ট করা আছে — কাস্টমারের কাছে কোনো সাইজ সিলেক্টর দেখাবে না।</span>`;
     }
@@ -224,6 +245,7 @@ function switchSizePickerGroup(prefix, group) {
     const btnLetter = document.getElementById(`${prefix}_grp_letter`);
     const btnWaist = document.getElementById(`${prefix}_grp_waist`);
     const btnFree = document.getElementById(`${prefix}_grp_free`);
+    const btnNone = document.getElementById(`${prefix}_grp_none`);
 
     if (btnLetter) {
         btnLetter.style.background = group === "letter" ? "#2563eb" : "#fff";
@@ -237,6 +259,10 @@ function switchSizePickerGroup(prefix, group) {
         btnFree.style.background = group === "free" ? "#059669" : "#fff";
         btnFree.style.color = group === "free" ? "#fff" : "#059669";
     }
+    if (btnNone) {
+        btnNone.style.background = group === "none" ? "#475569" : "#fff";
+        btnNone.style.color = group === "none" ? "#fff" : "#334155";
+    }
 
     if (checksEl) {
         checksEl.innerHTML = renderSizeCheckboxesHtml(prefix, group, null);
@@ -245,10 +271,10 @@ function switchSizePickerGroup(prefix, group) {
 
 function getSelectedSizeFromPicker(prefix) {
     const grpValEl = document.getElementById(`${prefix}_sizeGroupVal`);
-    const group = grpValEl ? grpValEl.value : "free";
-    if (group === "free") {
-        return "Free Size";
-    }
+    const group = grpValEl ? grpValEl.value : "none";
+    if (group === "none") return "No Size";
+    if (group === "free") return "Free Size";
+
     const checked = Array.from(document.querySelectorAll(`.${prefix}_sz_cb:checked`)).map(cb => cb.value.trim());
     if (checked.length === 0) {
         const fallbackList = group === "waist" ? SIZE_PRESETS.waist : SIZE_PRESETS.letter;
@@ -412,7 +438,12 @@ function renderProducts() {
 
 function isFreeSizeValue(sizeStr) {
     const clean = (sizeStr || "").trim().toLowerCase();
-    return !clean || clean === "free size" || clean === "free" || clean.includes("free size");
+    return clean === "free size" || clean === "free" || clean.includes("free size");
+}
+
+function isNoSizeValue(sizeStr) {
+    const clean = (sizeStr || "").trim().toLowerCase();
+    return !clean || clean === "no size" || clean === "none" || clean.includes("no size");
 }
 
 function renderGrid(containerId, list) {
@@ -424,12 +455,15 @@ function renderGrid(containerId, list) {
     }
 
     container.innerHTML = list.map(p => {
+        const noSize = isNoSizeValue(p.size);
         const freeSize = isFreeSizeValue(p.size);
-        const sizeChoices = p.size.split(',').map(s => s.trim()).filter(Boolean);
+        const sizeChoices = (!noSize && !freeSize)
+            ? p.size.split(',').map(s => s.trim()).filter(Boolean)
+            : [];
         const isStockOut = Boolean(p.isStockOut);
 
         let sizeSelectorHtml = "";
-        if (!freeSize && sizeChoices.length > 0) {
+        if (!noSize && !freeSize && sizeChoices.length > 0) {
             sizeSelectorHtml = `
                 <div style="margin:6px 0;">
                     <label style="font-size:11px; font-weight:600; color:#334155;">Size:</label>
@@ -622,7 +656,7 @@ function calculateComboTotal() {
     activeCombo = {
         name: `Custom Combo Pack (${p1.name} + ${p2.name} + ${p3.name})`,
         price: discTotal,
-        selectedSize: "Free Size"
+        selectedSize: ""
     };
 
     document.getElementById('comboSummaryText').innerText = `${p1.name} + ${p2.name} + ${p3.name}`;
@@ -639,7 +673,7 @@ function addComboToCart() {
         id: Date.now(),
         name: activeCombo.name,
         price: activeCombo.price,
-        selectedSize: activeCombo.selectedSize || "Free Size"
+        selectedSize: ""
     });
     updateHeaderCounters();
     renderCartModal();
@@ -703,14 +737,19 @@ function handleReviewSubmit(e) {
     });
 }
 
+// প্রতিবার Track Now চাপলে স্টোরেজ থেকে ফ্রেশ অর্ডার স্ট্যাটাস পড়ে দেখায় (পেজ রিফ্রেশ ছাড়াই)
 function handleTrackOrder() {
-    const phone = document.getElementById('trackPhoneInput').value.trim();
+    orders = readOrdersFromStorage();
+    const phone = (document.getElementById('trackPhoneInput')?.value || "").trim();
     const resultBox = document.getElementById('trackResult');
+    if (!resultBox) return;
+
     if (!phone) {
         resultBox.innerHTML = "<p style='color:red;'>Please enter a phone number.</p>";
         return;
     }
-    const userOrders = orders.filter(o => o.phone === phone);
+
+    const userOrders = orders.filter(o => String(o.phone).trim() === phone);
     if (userOrders.length === 0) {
         resultBox.innerHTML = "<p style='color:#777;'>No orders found with this phone number.</p>";
     } else {
@@ -734,10 +773,14 @@ function addToCart(id, containerId = "") {
         return;
     }
 
-    let chosenSize = "Free Size";
-    if (!isFreeSizeValue(p.size)) {
-        const selEl = containerId ? document.getElementById(`cardSize_${containerId}_${id}`) : null;
-        chosenSize = selEl ? selEl.value : (p.size.split(',')[0]?.trim() || "Free Size");
+    let chosenSize = "";
+    if (!isNoSizeValue(p.size)) {
+        if (isFreeSizeValue(p.size)) {
+            chosenSize = "Free Size";
+        } else {
+            const selEl = containerId ? document.getElementById(`cardSize_${containerId}_${id}`) : null;
+            chosenSize = selEl ? selEl.value : (p.size.split(',')[0]?.trim() || "");
+        }
     }
 
     cart.push({
@@ -779,7 +822,7 @@ function renderCartModal() {
     } else {
         container.innerHTML = cart.map((item, idx) => `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; border-bottom:1px solid #eee; padding-bottom:4px;">
-                <span style="font-size:13px;">${item.name} <strong style="color:#1d4ed8;">(${item.selectedSize || 'Free Size'})</strong></span>
+                <span style="font-size:13px;">${item.name}${item.selectedSize ? ` <strong style="color:#1d4ed8;">(${item.selectedSize})</strong>` : ''}</span>
                 <span style="font-size:13px; font-weight:bold;">৳${item.price} <button onclick="removeFromCart(${idx})" style="color:red; background:none; border:none; cursor:pointer; margin-left:5px; font-size:15px;">&times;</button></span>
             </div>
         `).join('');
@@ -802,6 +845,32 @@ function renderWishlistModal() {
             <button onclick="addToCart(${item.id})" style="background:#1a365d; color:white; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Add Cart</button>
         </div>
     `).join('');
+}
+
+async function sendOrderEmailAlert(order, areaText) {
+    if (!EMAILJS_PUBLIC_KEY || !EMAILJS_SERVICE_ID || !EMAILJS_TEMPLATE_ID) return;
+    try {
+        await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                service_id: EMAILJS_SERVICE_ID,
+                template_id: EMAILJS_TEMPLATE_ID,
+                user_id: EMAILJS_PUBLIC_KEY,
+                template_params: {
+                    order_id: `#${order.id}`,
+                    customer_name: order.name,
+                    phone: order.phone,
+                    address: order.address,
+                    delivery_zone: areaText,
+                    items: order.items.map(i => `${i.name}${i.selectedSize ? ` (${i.selectedSize})` : ''} - ৳${i.price}`).join(", "),
+                    total: `৳${order.total}`
+                }
+            })
+        });
+    } catch (err) {
+        console.warn("Email alert failed:", err.message);
+    }
 }
 
 function handleOrderConfirm(e) {
@@ -834,8 +903,10 @@ function handleOrderConfirm(e) {
         date: new Date().toLocaleDateString()
     };
 
+    orders = readOrdersFromStorage();
     orders.unshift(newOrder);
     safeSaveStorage('store_orders', orders);
+    sendOrderEmailAlert(newOrder, areaText);
 
     renderAdminOrdersList();
     renderAdminAnalytics();
@@ -860,7 +931,7 @@ function generateInvoiceSlip(order, areaText) {
         <p><strong>Delivery Zone:</strong> ${areaText}</p>
         <hr style="margin: 10px 0; border-top: 1px solid #ccc;">
         <p><strong>Items Ordered:</strong></p>
-        ${order.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:12px;"><span>- ${i.name} (${i.selectedSize || 'Free Size'})</span><span>৳${i.price}</span></div>`).join('')}
+        ${order.items.map(i => `<div style="display:flex; justify-content:space-between; font-size:12px;"><span>- ${i.name}${i.selectedSize ? ` (${i.selectedSize})` : ''}</span><span>৳${i.price}</span></div>`).join('')}
         <hr style="margin: 10px 0; border-top: 1px dashed #333;">
         <p style="display:flex; justify-content:space-between;"><span>Subtotal:</span> <span>৳${order.subtotal}</span></p>
         <p style="display:flex; justify-content:space-between;"><span>Delivery Fee:</span> <span>৳${order.deliveryFee}</span></p>
@@ -938,6 +1009,7 @@ function switchAdminTab(tabId, ev) {
 }
 
 function renderAdminAnalytics() {
+    orders = readOrdersFromStorage();
     const totalRev = orders.filter(o => o.status !== 'Cancelled').reduce((sum, o) => sum + o.total, 0);
     document.getElementById('statTotalProducts').innerText = products.length;
     document.getElementById('statTotalOrders').innerText = orders.length;
@@ -956,6 +1028,7 @@ function renderAdminAnalytics() {
 }
 
 function renderAdminOrdersList() {
+    orders = readOrdersFromStorage();
     const container = document.getElementById('adminOrdersList');
     if (!container) return;
     if (orders.length === 0) {
@@ -970,7 +1043,7 @@ function renderAdminOrdersList() {
             </div>
             <p style="font-size:12px; color:#555; margin-top:4px;">Phone: ${o.phone} | Address: ${o.address || 'N/A'}</p>
             <p style="font-size:11px; color:#475569; margin-top:4px;">
-                <strong>Items:</strong> ${o.items.map(i => `${i.name} (${i.selectedSize || 'Free Size'})`).join(', ')}
+                <strong>Items:</strong> ${o.items.map(i => `${i.name}${i.selectedSize ? ` (${i.selectedSize})` : ''}`).join(', ')}
             </p>
             <div style="margin-top:8px; display:flex; align-items:center; gap:8px;">
                 <span style="font-size:12px;">Status: <strong style="color:${o.status === 'Cancelled' ? '#dc2626' : '#16a34a'};">${o.status}</strong></span>
@@ -986,6 +1059,7 @@ function renderAdminOrdersList() {
 }
 
 function updateOrderStatus(orderId, newStatus) {
+    orders = readOrdersFromStorage();
     const order = orders.find(o => o.id === orderId);
     if (order) {
         order.status = newStatus;
@@ -1068,7 +1142,7 @@ async function handleAddProduct(e) {
         const imgUrl = await uploadImageSmart(fileInput, 600, 600, 0.78);
         const chosenSizes = document.getElementById('addProd_sizePickerBox')
             ? getSelectedSizeFromPicker('addProd')
-            : (document.getElementById('pSize')?.value || "Free Size");
+            : (document.getElementById('pSize')?.value || "No Size");
 
         const newProd = {
             id: Date.now(),
@@ -1207,7 +1281,7 @@ function renderAdminProductList() {
                 <input type="checkbox" ${selectedProductIds.has(p.id) ? 'checked' : ''} onchange="toggleProductSelection(${p.id}, this.checked)" style="width:16px; height:16px; cursor:pointer;">
                 <div>
                     <strong>${p.name}</strong> (${p.category}) - ৳${p.price}
-                    <br><span style="font-size:11px; color:#475569;">Sizes: ${p.size || 'Free Size'}</span>
+                    <br><span style="font-size:11px; color:#475569;">Size Mode: ${p.size || 'No Size'}</span>
                     <br>
                     <span style="font-size:11px; color:${p.isFeatured ? 'green' : 'gray'}; margin-right:8px;">${p.isFeatured ? '⭐ Featured' : 'Not Featured'}</span>
                     <span style="font-size:11px; font-weight:bold; color:${p.isStockOut ? '#dc2626' : '#2563eb'};">${p.isStockOut ? 'Stock Out' : 'In Stock'}</span>
@@ -1283,7 +1357,7 @@ function openEditProductModal(id) {
                         ${categoriesList.map(c => `<option value="${c}">${c}</option>`).join('')}
                     </select>
                 </div>
-                ${buildSizePickerUI('editProd', p.size || "Free Size")}
+                ${buildSizePickerUI('editProd', p.size || "No Size")}
                 <div>
                     <label style="font-size:12px; font-weight:bold;">Description:</label>
                     <textarea id="editPDesc" rows="2" style="width:100%; padding:7px; font-size:13px; border:1px solid #cbd5e1; border-radius:4px; margin-top:3px;"></textarea>
