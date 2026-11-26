@@ -594,62 +594,6 @@ function randomizeComboLook() {
     calculateComboTotal();
 }
 
-async function generateCombinedOutfitPreview() {
-    const ids = [
-        Number(document.getElementById('comboItem1')?.value),
-        Number(document.getElementById('comboItem2')?.value),
-        Number(document.getElementById('comboItem3')?.value)
-    ];
-
-    const selectedItems = ids
-        .map(id => products.find(p => p.id === id))
-        .filter(Boolean);
-
-    const statusEl = document.getElementById('combinedLookStatus');
-    const imgEl = document.getElementById('combinedLookImg');
-    const noteEl = document.getElementById('stylistNoteBox');
-
-    if (selectedItems.length === 0) {
-        if (statusEl) statusEl.innerText = "আগে অন্তত ১টি বা ৩টি আইটেম সিলেক্ট করুন।";
-        return;
-    }
-
-    if (statusEl) statusEl.innerText = "Combined look ও Style Match তৈরি হচ্ছে...";
-
-    try {
-        const res = await fetch("http://127.0.0.1:5000/api/generate-look", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                persona: currentStylePersona,
-                items: selectedItems
-            })
-        });
-
-        if (!res.ok) {
-            throw new Error("Python server response error");
-        }
-
-        const data = await res.json();
-        if (data.ok && data.image && imgEl) {
-            imgEl.src = data.image;
-            imgEl.style.display = "block";
-            if (noteEl && data.stylist_note) {
-                noteEl.innerHTML = data.stylist_note.replace(/\n\n/g, "<br><br>").replace(/\n/g, "<br>");
-                noteEl.style.display = "block";
-            }
-            if (statusEl) {
-                statusEl.innerText = data.message || "Look ready.";
-            }
-            return;
-        }
-        throw new Error(data.error || "Invalid response");
-    } catch (err) {
-        if (statusEl) {
-            statusEl.innerText = "Python ব্যাকএন্ড (port 5000) চালু নেই। আগে app.py রান করুন।";
-        }
-    }
-}
 
 function calculateComboTotal() {
     const id1 = Number(document.getElementById('comboItem1')?.value);
