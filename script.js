@@ -1,6 +1,9 @@
 const CLOUDINARY_CLOUD_NAME = "go4lgpen";
 const CLOUDINARY_UPLOAD_PRESET = "oneshop_unsigned";
 
+const SUPABASE_URL = "https://eqeascdqnzjwqaghmccp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZWFzY2Rxbnpqd3FhZ2htY2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MjcyMzksImV4cCI6MjExMTIwMzIzOX0.hUJtTuTBsxxxlZxkIbpHSqp5W2cchhX_yEa4mDvHWEI";
+
 const categoriesList = [
     "Shirt", "T Shirt", "Polo Shirt", "Panabi", "Jeans",
     "Formal Pant", "Cargo Pant", "Gabardine Pant", "Joggers", "Hoodie",
@@ -20,15 +23,59 @@ const defaultBanners = [
 
 const placeholderSlotImg = "https://via.placeholder.com/120x120?text=Select+Item";
 
-let products = JSON.parse(localStorage.getItem('store_products')) || [
-    { id: 1, name: "Casual Denim Shirt", price: 1200, category: "Shirt", size: "M, L, XL", desc: "100% pure cotton shirt", img: "https://picsum.photos/300/300?random=1", isFeatured: true },
-    { id: 2, name: "Premium Polo T-Shirt", price: 650, category: "T Shirt", size: "L, XL", desc: "Comfortable daily wear", img: "https://picsum.photos/300/300?random=2", isFeatured: true },
-    { id: 3, name: "Slim Fit Jeans", price: 1500, category: "Jeans", size: "30, 32, 34", desc: "Stretchable denim", img: "https://picsum.photos/300/300?random=3", isFeatured: true },
-    { id: 4, name: "Katan Saree", price: 3500, category: "Saree", size: "Free Size", desc: "Traditional party wear", img: "https://picsum.photos/300/300?random=4", isFeatured: true },
-    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "Adjustable", desc: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", isFeatured: false },
-    { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", desc: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", isFeatured: false }
+const starterProducts = [
+    { id: 1, name: "Casual Denim Shirt", price: 1200, category: "Shirt", size: "M, L, XL", description: "100% pure cotton shirt", img: "https://picsum.photos/300/300?random=1", is_featured: true },
+    { id: 2, name: "Premium Polo T-Shirt", price: 650, category: "T Shirt", size: "L, XL", description: "Comfortable daily wear", img: "https://picsum.photos/300/300?random=2", is_featured: true },
+    { id: 3, name: "Slim Fit Jeans", price: 1500, category: "Jeans", size: "30, 32, 34", description: "Stretchable denim", img: "https://picsum.photos/300/300?random=3", is_featured: true },
+    { id: 4, name: "Katan Saree", price: 3500, category: "Saree", size: "Free Size", description: "Traditional party wear", img: "https://picsum.photos/300/300?random=4", is_featured: true },
+    { id: 5, name: "Classic Chronograph Watch", price: 1850, category: "Men's Watch", size: "Adjustable", description: "Water-resistant everyday timepiece", img: "https://picsum.photos/300/300?random=5", is_featured: false },
+    { id: 6, name: "Festival Combo Pack", price: 2290, category: "Combo Pack", size: "M, L, XL", description: "Shirt + Belt + Wallet combo offer", img: "https://picsum.photos/300/300?random=6", is_featured: false }
 ];
 
+function normalizeProduct(row) {
+    return {
+        id: Number(row.id),
+        name: row.name,
+        price: Number(row.price),
+        category: row.category,
+        size: row.size,
+        desc: row.description ?? row.desc ?? "",
+        img: row.img,
+        isFeatured: Boolean(row.is_featured ?? row.isFeatured)
+    };
+}
+
+function toDbProduct(prod) {
+    return {
+        id: Number(prod.id),
+        name: prod.name,
+        price: Number(prod.price),
+        category: prod.category,
+        size: prod.size,
+        description: prod.desc ?? prod.description ?? "",
+        img: prod.img,
+        is_featured: Boolean(prod.isFeatured ?? prod.is_featured)
+    };
+}
+
+async function sbRequest(path, options = {}) {
+    const url = `${SUPABASE_URL}/rest/v1/${path}`;
+    const headers = {
+        "apikey": SUPABASE_ANON_KEY,
+        "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+    };
+    const res = await fetch(url, { ...options, headers });
+    if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || `Supabase error ${res.status}`);
+    }
+    const text = await res.text();
+    return text ? JSON.parse(text) : null;
+}
+
+let products = (JSON.parse(localStorage.getItem('store_products')) || starterProducts).map(normalizeProduct);
 let banners = JSON.parse(localStorage.getItem('store_banners')) || [...defaultBanners];
 let reviews = JSON.parse(localStorage.getItem('store_reviews')) || [
     { name: "Tanvir Ahmed", comment: "Fabric quality was top notch! Highly recommended.", fit: "True to Size", images: ["https://picsum.photos/200/200?random=20"] },
@@ -51,8 +98,59 @@ function safeSaveStorage(key, value) {
         localStorage.setItem(key, JSON.stringify(value));
         return true;
     } catch (err) {
-        alert("ব্রাউজারের স্টোরেজ (LocalStorage) প্রায় ভরে গেছে! পুরোনো বড় ছবি বা ব্যানার ডিলিট করে আবার চেষ্টা করুন।");
+        alert("ব্রাউজারের স্টোরেজ (LocalStorage) প্রায় ভরে গেছে!");
         return false;
+    }
+}
+
+function showSyncNotice(msg, isError = false) {
+    console[isError ? "error" : "log"]("[Supabase Sync]:", msg);
+    const footerP = document.querySelector(".main-footer > p");
+    if (footerP) {
+        footerP.innerHTML = `&copy; 2026 One Shop Collection. All Rights Reserved. | <span style="color:${isError ? '#f87171' : '#4ade80'}; font-weight:600;">${msg}</span>`;
+    }
+}
+
+async function syncFromSupabase() {
+    try {
+        showSyncNotice("Syncing with Supabase...");
+        const [dbProds, dbBanners] = await Promise.all([
+            sbRequest("products?select=*&order=id.asc"),
+            sbRequest("banners?select=*&order=id.asc")
+        ]);
+
+        if (Array.isArray(dbProds) && dbProds.length > 0) {
+            products = dbProds.map(normalizeProduct);
+            safeSaveStorage('store_products', products);
+        } else if (products.length > 0) {
+            await sbRequest("products?on_conflict=id", {
+                method: "POST",
+                headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+                body: JSON.stringify(products.map(toDbProduct))
+            });
+        }
+
+        if (Array.isArray(dbBanners) && dbBanners.length > 0) {
+            banners = dbBanners.map(b => b.img);
+            safeSaveStorage('store_banners', banners);
+        } else if (banners.length > 0) {
+            const payload = banners.map((url, i) => ({ id: Date.now() + i, img: url }));
+            await sbRequest("banners?on_conflict=id", {
+                method: "POST",
+                headers: { "Prefer": "resolution=merge-duplicates,return=minimal" },
+                body: JSON.stringify(payload)
+            });
+        }
+
+        renderProducts();
+        renderBanners();
+        startSlider();
+        renderAdminProductList();
+        renderAdminBannerList();
+        renderAdminAnalytics();
+        showSyncNotice(`Supabase Connected (${products.length} products, ${banners.length} banners)`);
+    } catch (err) {
+        showSyncNotice(`Supabase Sync Error: ${err.message}`, true);
     }
 }
 
@@ -67,6 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderAdminOrdersList();
     renderAdminAnalytics();
     startSlider();
+    syncFromSupabase();
 
     document.addEventListener('click', (e) => {
         const popup = document.getElementById('categoryPopup');
@@ -640,6 +739,7 @@ function verifyAdminPin() {
         renderAdminBannerList();
         renderAdminOrdersList();
         renderAdminAnalytics();
+        syncFromSupabase();
     } else {
         alert('Incorrect Admin Password!');
     }
@@ -789,16 +889,23 @@ async function handleAddProduct(e) {
             isFeatured: isFeaturedChecked
         };
 
+        await sbRequest("products", {
+            method: "POST",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify(toDbProduct(newProd))
+        });
+
         products.push(newProd);
-        if (safeSaveStorage('store_products', products)) {
-            renderProducts();
-            renderAdminProductList();
-            renderAdminAnalytics();
-            alert("Product added successfully!");
-            e.target.reset();
-        }
+        safeSaveStorage('store_products', products);
+        renderProducts();
+        renderAdminProductList();
+        renderAdminAnalytics();
+        showSyncNotice("Product saved to Supabase!");
+        alert("Product added & synced to Supabase!");
+        e.target.reset();
     } catch (err) {
-        alert(err.message || "Product যোগ করতে সমস্যা হয়েছে।");
+        showSyncNotice(`Add Product Error: ${err.message}`, true);
+        alert("সমস্যা হয়েছে: " + (err.message || "Product যোগ করা যায়নি।"));
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -834,24 +941,30 @@ function toggleSelectAllProducts(checked) {
     renderAdminProductList();
 }
 
-function bulkToggleFeature(makeFeatured) {
+async function bulkToggleFeature(makeFeatured) {
     if (selectedProductIds.size === 0) {
         alert("আগে অন্তত ১টি প্রোডাক্ট সিলেক্ট করুন।");
         return;
     }
-    products = products.map(p => {
-        if (selectedProductIds.has(p.id)) {
-            return { ...p, isFeatured: makeFeatured };
-        }
-        return p;
-    });
+    const ids = Array.from(selectedProductIds);
+    try {
+        await sbRequest(`products?id=in.(${ids.join(",")})`, {
+            method: "PATCH",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({ is_featured: makeFeatured })
+        });
+    } catch (err) {
+        console.warn("Supabase bulk update warning:", err.message);
+    }
+
+    products = products.map(p => selectedProductIds.has(p.id) ? { ...p, isFeatured: makeFeatured } : p);
     safeSaveStorage('store_products', products);
     renderProducts();
     renderAdminProductList();
     alert(makeFeatured ? "সিলেক্ট করা প্রোডাক্টগুলো Featured করা হয়েছে।" : "সিলেক্ট করা প্রোডাক্টগুলো Featured থেকে সরানো হয়েছে।");
 }
 
-function bulkDeleteProducts() {
+async function bulkDeleteProducts() {
     if (selectedProductIds.size === 0) {
         alert("আগে অন্তত ১টি প্রোডাক্ট সিলেক্ট করুন।");
         return;
@@ -859,6 +972,16 @@ function bulkDeleteProducts() {
     if (!confirm(`আপনি কি ${selectedProductIds.size}টি প্রোডাক্ট একসাথে ডিলিট করতে চান?`)) {
         return;
     }
+    const ids = Array.from(selectedProductIds);
+    try {
+        await sbRequest(`products?id=in.(${ids.join(",")})`, {
+            method: "DELETE",
+            headers: { "Prefer": "return=minimal" }
+        });
+    } catch (err) {
+        console.warn("Supabase bulk delete warning:", err.message);
+    }
+
     products = products.filter(p => !selectedProductIds.has(p.id));
     selectedProductIds.clear();
     safeSaveStorage('store_products', products);
@@ -903,23 +1026,41 @@ function renderAdminProductList() {
     `).join('');
 }
 
-function toggleFeature(id) {
+async function toggleFeature(id) {
     const p = products.find(prod => prod.id === id);
-    if (p) {
-        p.isFeatured = !p.isFeatured;
-        safeSaveStorage('store_products', products);
-        renderProducts();
-        renderAdminProductList();
+    if (!p) return;
+    const nextVal = !p.isFeatured;
+    try {
+        await sbRequest(`products?id=eq.${id}`, {
+            method: "PATCH",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({ is_featured: nextVal })
+        });
+    } catch (err) {
+        console.warn("Supabase feature update warning:", err.message);
     }
-}
-
-function deleteProduct(id) {
-    products = products.filter(p => p.id !== id);
-    selectedProductIds.delete(id);
+    p.isFeatured = nextVal;
     safeSaveStorage('store_products', products);
     renderProducts();
     renderAdminProductList();
-    renderAdminAnalytics();
+}
+
+async function deleteProduct(id) {
+    try {
+        await sbRequest(`products?id=eq.${id}`, {
+            method: "DELETE",
+            headers: { "Prefer": "return=minimal" }
+        });
+        products = products.filter(p => p.id !== id);
+        selectedProductIds.delete(id);
+        safeSaveStorage('store_products', products);
+        renderProducts();
+        renderAdminProductList();
+        renderAdminAnalytics();
+        showSyncNotice("Product deleted from Supabase.");
+    } catch (err) {
+        alert("Delete Error: " + err.message);
+    }
 }
 
 async function handleAddBanner(e) {
@@ -934,19 +1075,26 @@ async function handleAddBanner(e) {
         }
 
         const bannerUrl = await uploadImageSmart(fileInput, 1100, 420, 0.72);
+        const newBannerId = Date.now();
+
+        await sbRequest("banners", {
+            method: "POST",
+            headers: { "Prefer": "return=minimal" },
+            body: JSON.stringify({ id: newBannerId, img: bannerUrl })
+        });
+
         banners.push(bannerUrl);
-        if (safeSaveStorage('store_banners', banners)) {
-            renderBanners();
-            renderAdminBannerList();
-            renderAdminAnalytics();
-            startSlider();
-            alert("Banner slide added successfully!");
-            e.target.reset();
-        } else {
-            banners.pop();
-        }
+        safeSaveStorage('store_banners', banners);
+        renderBanners();
+        renderAdminBannerList();
+        renderAdminAnalytics();
+        startSlider();
+        showSyncNotice("Banner saved to Supabase!");
+        alert("Banner slide added & synced to Supabase!");
+        e.target.reset();
     } catch (err) {
-        alert(err.message || "Banner যোগ করতে সমস্যা হয়েছে।");
+        showSyncNotice(`Add Banner Error: ${err.message}`, true);
+        alert("সমস্যা হয়েছে: " + (err.message || "Banner যোগ করা যায়নি।"));
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
@@ -955,7 +1103,7 @@ async function handleAddBanner(e) {
     }
 }
 
-function resetDefaultBanners() {
+async function resetDefaultBanners() {
     banners = [...defaultBanners];
     safeSaveStorage('store_banners', banners);
     renderBanners();
@@ -979,16 +1127,28 @@ function renderAdminBannerList() {
     `).join('');
 }
 
-function deleteBanner(idx) {
-    banners.splice(idx, 1);
-    if (banners.length === 0) {
-        banners = [...defaultBanners];
+async function deleteBanner(idx) {
+    const targetUrl = banners[idx];
+    try {
+        if (targetUrl) {
+            await sbRequest(`banners?img=eq.${encodeURIComponent(targetUrl)}`, {
+                method: "DELETE",
+                headers: { "Prefer": "return=minimal" }
+            });
+        }
+        banners.splice(idx, 1);
+        if (banners.length === 0) {
+            banners = [...defaultBanners];
+        }
+        safeSaveStorage('store_banners', banners);
+        renderBanners();
+        renderAdminBannerList();
+        renderAdminAnalytics();
+        startSlider();
+        showSyncNotice("Banner updated on Supabase.");
+    } catch (err) {
+        alert("Banner Delete Error: " + err.message);
     }
-    safeSaveStorage('store_banners', banners);
-    renderBanners();
-    renderAdminBannerList();
-    renderAdminAnalytics();
-    startSlider();
 }
 
 async function handleUpdateLogo(e) {
