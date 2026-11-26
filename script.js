@@ -1140,37 +1140,60 @@ async function handleAddProduct(e) {
         e.preventDefault();
     }
 
-    const formEl = (e && e.target && e.target.tagName === "FORM")
-        ? e.target
-        : document.getElementById('addProductForm') || document.querySelector('#adminAddProduct form') || document.getElementById('pName')?.closest('form');
-
-    const nameVal = (document.getElementById('pName')?.value || "").trim();
-    const priceVal = Number(document.getElementById('pPrice')?.value || 0);
-    const catVal = document.getElementById('pCat')?.value || categoriesList[0];
-    const descVal = (document.getElementById('pDesc')?.value || "").trim();
+    const nameInput = document.getElementById('pName');
+    const priceInput = document.getElementById('pPrice');
+    const catInput = document.getElementById('pCat');
+    const descInput = document.getElementById('pDesc');
     const fileInput = document.getElementById('pImgFile');
-    const isFeaturedChecked = Boolean(document.getElementById('pIsFeatured')?.checked);
-    const submitBtn = formEl?.querySelector('button[type="submit"]') || document.querySelector('#adminAddProduct button');
+    const featInput = document.getElementById('pIsFeatured');
 
-    if (!nameVal || !priceVal) {
-        alert("Product Name এবং Price সঠিকভাবে দিন।");
+    const formEl =
+        (e && e.target && e.target.tagName === "FORM")
+            ? e.target
+            : nameInput?.closest('form') || document.querySelector('#adminAddProduct form');
+
+    const submitBtn =
+        formEl?.querySelector('button[type="submit"]') ||
+        formEl?.querySelector('button') ||
+        document.querySelector('#adminAddProduct button');
+
+    const nameVal = (nameInput?.value || "").trim();
+    const priceVal = Number(priceInput?.value || 0);
+    const catVal = catInput?.value || categoriesList[0] || "Shirt";
+    const descVal = (descInput?.value || "").trim();
+    const isFeaturedChecked = Boolean(featInput?.checked);
+
+    if (!nameVal) {
+        alert("Product Name লেখো ভাই!");
+        nameInput?.focus();
         return;
     }
+    if (!priceVal || priceVal <= 0) {
+        alert("সঠিক Price লেখো!");
+        priceInput?.focus();
+        return;
+    }
+    if (!fileInput?.files?.[0]) {
+        alert("আগে একটা ছবি সিলেক্ট করো!");
+        return;
+    }
+
+    const prevText = submitBtn ? submitBtn.innerText : "Save Product";
 
     try {
         if (submitBtn) {
             submitBtn.disabled = true;
-            submitBtn.dataset.origText = submitBtn.innerText;
             submitBtn.innerText = "Uploading...";
         }
 
         const imgUrl = await uploadImageSmart(fileInput, 600, 600, 0.78);
+
         const chosenSizes = document.getElementById('addProd_sizePickerBox')
             ? getSelectedSizeFromPicker('addProd')
             : (document.getElementById('pSize')?.value || "No Size");
 
         const newProd = {
-            id: Date.now(),
+            id: Math.floor(Date.now() / 1000) * 1000 + Math.floor(Math.random() * 900),
             name: nameVal,
             price: priceVal,
             img: imgUrl,
@@ -1187,9 +1210,11 @@ async function handleAddProduct(e) {
                 headers: { "Prefer": "return=minimal" },
                 body: JSON.stringify(toDbProduct(newProd))
             });
+            showSyncNotice("Product saved to Supabase!");
         } catch (sbErr) {
-            console.warn("Supabase insert warning:", sbErr.message);
-            alert("লোকালি সেভ হচ্ছে, কিন্তু Supabase-এ সেভ হতে সমস্যা: " + sbErr.message);
+            console.warn("Supabase insert failed:", sbErr);
+            showSyncNotice("Saved locally (Supabase error)", true);
+            alert("প্রোডাক্ট লোকালি সেভ হয়েছে, কিন্তু Supabase-এ সমস্যা: " + (sbErr?.message || sbErr));
         }
 
         products.push(newProd);
@@ -1197,22 +1222,44 @@ async function handleAddProduct(e) {
         renderProducts();
         renderAdminProductList();
         renderAdminAnalytics();
-        showSyncNotice("Product saved!");
-        alert("Product added successfully!");
 
+        alert("Product added successfully!");
         if (formEl) formEl.reset();
-        switchSizePickerGroup('addProd', 'letter');
+        if (document.getElementById('addProd_sizePickerBox')) {
+            switchSizePickerGroup('addProd', 'letter');
+        }
     } catch (err) {
-        console.error("Save product error:", err);
-        alert("Save Product Error: " + (err?.message || err));
+        console.error("Add product failed:", err);
+        alert("ছবি বা প্রোডাক্ট সেভ করতে সমস্যা হয়েছে: " + (err?.message || err));
     } finally {
         if (submitBtn) {
             submitBtn.disabled = false;
-            submitBtn.innerText = submitBtn.dataset.origText || "Save Product";
+            submitBtn.innerText = prevText || "Save Product";
         }
     }
 }
 
+document.addEventListener("DOMContentLoaded", () => {
+    const pNameEl = document.getElementById('pName');
+    const formEl = pNameEl?.closest('form') || document.querySelector('#adminAddProduct form');
+    if (formEl && !formEl.dataset.boundSaveProduct) {
+        formEl.dataset.boundSaveProduct = "1";
+        formEl.addEventListener("submit", handleAddProduct);
+    }
+});
+
+document.addEventListener("click", (e) => {
+    const btn = e.target.closest("button");
+    if (!btn) return;
+    const txt = (btn.innerText || "").trim().toLowerCase();
+    if (txt === "save product") {
+        const formEl = btn.closest("form") || document.getElementById('pName')?.closest('form');
+        if (!formEl) {
+            e.preventDefault();
+            handleAddProduct(e);
+        }
+    }
+})
 function updateSelectedCountLabel() {
     const countEl = document.getElementById('selectedProductCount');
     if (countEl) countEl.innerText = selectedProductIds.size;
