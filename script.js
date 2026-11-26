@@ -4,10 +4,9 @@ const CLOUDINARY_UPLOAD_PRESET = "oneshop_unsigned";
 const SUPABASE_URL = "https://eqeascdqnzjwqaghmccp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZWFzY2Rxbnpqd3FhZ2htY2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MjcyMzksImV4cCI6MjExMTIwMzIzOX0.hUJtTuTBsxxxlZxkIbpHSqp5W2cchhX_yEa4mDvHWEI";
 
-// চাইলে EmailJS-এর কী বসালে প্রতি অর্ডারে সাথে সাথে ইমেইল/মোবাইল নোটিফিকেশন যাবে
-const EMAILJS_PUBLIC_KEY = "I_xywg1u6Cwdtqppb";
-const EMAILJS_SERVICE_ID = "service_c93tvqo";
-const EMAILJS_TEMPLATE_ID = "template_pp3i4i";
+const EMAILJS_PUBLIC_KEY = "";
+const EMAILJS_SERVICE_ID = "";
+const EMAILJS_TEMPLATE_ID = "";
 
 const categoriesList = [
     "Shirt", "T Shirt", "Polo Shirt", "Panabi", "Jeans",
@@ -294,9 +293,19 @@ function injectAddProductSizePicker() {
     pSizeEl.parentNode.insertBefore(container.firstElementChild, pSizeEl.nextSibling);
 }
 
+function bindAddProductFormDirectly() {
+    const pNameEl = document.getElementById('pName');
+    const formEl = pNameEl?.closest('form') || document.querySelector('#adminAddProduct form');
+    if (formEl && !formEl.dataset.boundSaveProduct) {
+        formEl.dataset.boundSaveProduct = "1";
+        formEl.addEventListener("submit", handleAddProduct);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     renderCategories();
     injectAddProductSizePicker();
+    bindAddProductFormDirectly();
     renderLogo();
     renderBanners();
     renderProducts();
@@ -320,8 +329,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = e.target.closest("button");
         if (btn) {
             const txt = (btn.innerText || "").trim().toLowerCase();
-            if (txt === "save product" && btn.type !== "submit") {
-                handleAddProduct(e);
+            if (txt === "save product") {
+                const formEl = btn.closest("form") || document.getElementById('pName')?.closest('form');
+                if (!formEl || btn.type !== "submit") {
+                    e.preventDefault();
+                    handleAddProduct(e);
+                }
             }
         }
     });
@@ -745,7 +758,6 @@ function handleReviewSubmit(e) {
     });
 }
 
-// প্রতিবার Track Now চাপলে স্টোরেজ থেকে ফ্রেশ অর্ডার স্ট্যাটাস পড়ে দেখায় (পেজ রিফ্রেশ ছাড়াই)
 function handleTrackOrder() {
     orders = readOrdersFromStorage();
     const phone = (document.getElementById('trackPhoneInput')?.value || "").trim();
@@ -997,6 +1009,7 @@ function verifyAdminPin() {
         closeModal('adminPassModal');
         openModal('adminPanelModal');
         injectAddProductSizePicker();
+        bindAddProductFormDirectly();
         renderAdminProductList();
         renderAdminBannerList();
         renderAdminOrdersList();
@@ -1013,7 +1026,10 @@ function switchAdminTab(tabId, ev) {
     const targetTab = document.getElementById('admin' + tabId.charAt(0).toUpperCase() + tabId.slice(1));
     if (targetTab) targetTab.classList.add('active');
     if (ev && ev.target) ev.target.classList.add('active');
-    if (tabId === 'addProduct') injectAddProductSizePicker();
+    if (tabId === 'addProduct') {
+        injectAddProductSizePicker();
+        bindAddProductFormDirectly();
+    }
 }
 
 function renderAdminAnalytics() {
@@ -1239,27 +1255,6 @@ async function handleAddProduct(e) {
     }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-    const pNameEl = document.getElementById('pName');
-    const formEl = pNameEl?.closest('form') || document.querySelector('#adminAddProduct form');
-    if (formEl && !formEl.dataset.boundSaveProduct) {
-        formEl.dataset.boundSaveProduct = "1";
-        formEl.addEventListener("submit", handleAddProduct);
-    }
-});
-
-document.addEventListener("click", (e) => {
-    const btn = e.target.closest("button");
-    if (!btn) return;
-    const txt = (btn.innerText || "").trim().toLowerCase();
-    if (txt === "save product") {
-        const formEl = btn.closest("form") || document.getElementById('pName')?.closest('form');
-        if (!formEl) {
-            e.preventDefault();
-            handleAddProduct(e);
-        }
-    }
-})
 function updateSelectedCountLabel() {
     const countEl = document.getElementById('selectedProductCount');
     if (countEl) countEl.innerText = selectedProductIds.size;
