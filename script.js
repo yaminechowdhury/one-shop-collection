@@ -4,10 +4,6 @@ const CLOUDINARY_UPLOAD_PRESET = "oneshop_unsigned";
 const SUPABASE_URL = "https://eqeascdqnzjwqaghmccp.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVxZWFzY2Rxbnpqd3FhZ2htY2NwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTU2MjcyMzksImV4cCI6MjExMTIwMzIzOX0.hUJtTuTBsxxxlZxkIbpHSqp5W2cchhX_yEa4mDvHWEI";
 
-const EMAILJS_PUBLIC_KEY = "";
-const EMAILJS_SERVICE_ID = "";
-const EMAILJS_TEMPLATE_ID = "";
-
 const categoriesList = [
     "Shirt", "T Shirt", "Polo Shirt", "Panabi", "Jeans",
     "Formal Pant", "Cargo Pant", "Gabardine Pant", "Joggers", "Hoodie",
@@ -25,6 +21,12 @@ const SIZE_PRESETS = {
     free: ["Free Size"],
     none: ["No Size"]
 };
+
+const TOP_CATS = ["shirt", "t shirt", "polo shirt", "panabi"];
+const BOTTOM_CATS = ["jeans", "formal pant", "cargo pant", "gabardine pant", "joggers"];
+const WATCH_CATS = ["men's watch", "smart watch"];
+const WALLET_CATS = ["wallet & card holder", "wallet"];
+const FOOTWEAR_CATS = ["sandals & loafers", "shoes & sneakers"];
 
 const defaultBanners = [
     "https://picsum.photos/1200/420?random=10",
@@ -114,6 +116,7 @@ let slideInterval;
 let activeCombo = null;
 let currentStylePersona = "men";
 let editingProductId = null;
+let latestRandomSet = null;
 
 function safeSaveStorage(key, value) {
     try {
@@ -293,19 +296,42 @@ function injectAddProductSizePicker() {
     pSizeEl.parentNode.insertBefore(container.firstElementChild, pSizeEl.nextSibling);
 }
 
-function bindAddProductFormDirectly() {
-    const pNameEl = document.getElementById('pName');
-    const formEl = pNameEl?.closest('form') || document.querySelector('#adminAddProduct form');
-    if (formEl && !formEl.dataset.boundSaveProduct) {
-        formEl.dataset.boundSaveProduct = "1";
-        formEl.addEventListener("submit", handleAddProduct);
+function forceFixSaveProductButton() {
+    const pSizeEl = document.getElementById('pSize');
+    if (pSizeEl) {
+        pSizeEl.required = false;
+        pSizeEl.removeAttribute('required');
+        pSizeEl.style.display = 'none';
+    }
+
+    const formEl =
+        document.getElementById('pName')?.closest('form') ||
+        document.querySelector('#adminAddProduct form');
+
+    if (formEl) {
+        formEl.setAttribute('novalidate', 'true');
+        formEl.onsubmit = function (ev) {
+            ev.preventDefault();
+            handleAddProduct(ev);
+            return false;
+        };
+    }
+
+    const allButtons = Array.from(document.querySelectorAll('button'));
+    const saveBtn = allButtons.find(b => (b.innerText || '').trim().toLowerCase() === 'save product');
+    if (saveBtn) {
+        saveBtn.type = 'button';
+        saveBtn.onclick = function (ev) {
+            ev.preventDefault();
+            handleAddProduct(ev);
+        };
     }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     renderCategories();
     injectAddProductSizePicker();
-    bindAddProductFormDirectly();
+    forceFixSaveProductButton();
     renderLogo();
     renderBanners();
     renderProducts();
@@ -317,24 +343,14 @@ document.addEventListener('DOMContentLoaded', () => {
     startSlider();
     syncFromSupabase();
 
+    setInterval(forceFixSaveProductButton, 1500);
+
     document.addEventListener('click', (e) => {
         const popup = document.getElementById('categoryPopup');
         const menuBtn = document.getElementById('categoryMenuBtn');
         if (popup && popup.classList.contains('show')) {
             if (!popup.contains(e.target) && (!menuBtn || !menuBtn.contains(e.target))) {
                 closeCategoryPopup();
-            }
-        }
-
-        const btn = e.target.closest("button");
-        if (btn) {
-            const txt = (btn.innerText || "").trim().toLowerCase();
-            if (txt === "save product") {
-                const formEl = btn.closest("form") || document.getElementById('pName')?.closest('form');
-                if (!formEl || btn.type !== "submit") {
-                    e.preventDefault();
-                    handleAddProduct(e);
-                }
             }
         }
     });
@@ -580,20 +596,247 @@ function updateLookCard() {
     }
 }
 
-function randomizeComboLook() {
-    if (products.length === 0) return;
-    const personas = ['men', 'women'];
-    setStylePersona(personas[Math.floor(Math.random() * personas.length)]);
+function pickMatchingProduct(targetCategories, usedIds = new Set()) {
+    const normalizeCat = (c = "") => c.trim().toLowerCase();
 
-    const pickRandomId = () => products[Math.floor(Math.random() * products.length)].id;
-    document.getElementById('comboItem1').value = pickRandomId();
-    document.getElementById('comboItem2').value = pickRandomId();
-    document.getElementById('comboItem3').value = pickRandomId();
+    const exactPool = products.filter(p =>
+        !usedIds.has(p.id) &&
+        targetCategories.some(cat => normalizeCat(p.category) === cat || normalizeCat(p.category).includes(cat))
+    );
+    if (exactPool.length > 0) {
+        return exactPool[Math.floor(Math.random() * exactPool.length)];
+    }
+
+    const anyExactPool = products.filter(p =>
+        targetCategories.some(cat => normalizeCat(p.category) === cat || normalizeCat(p.category).includes(cat))
+    );
+    if (anyExactPool.length > 0) {
+        return anyExactPool[Math.floor(Math.random() * anyExactPool.length)];
+    }
+
+    const unusedPool = products.filter(p => !usedIds.has(p.id));
+    if (unusedPool.length > 0) {
+        return unusedPool[Math.floor(Math.random() * unusedPool.length)];
+    }
+
+    return products[0] || null;
+}
+
+function randomizeComboLook() {
+    if (!Array.isArray(products) || products.length === 0) return;
+
+    setStylePersona("men");
+    const usedIds = new Set();
+
+    const topItem = pickMatchingProduct(TOP_CATS, usedIds);
+    if (topItem) usedIds.add(topItem.id);
+
+    const bottomItem = pickMatchingProduct(BOTTOM_CATS, usedIds);
+    if (bottomItem) usedIds.add(bottomItem.id);
+
+    const watchItem = pickMatchingProduct(WATCH_CATS, usedIds);
+    if (watchItem) usedIds.add(watchItem.id);
+
+    const walletItem = pickMatchingProduct(WALLET_CATS, usedIds);
+    if (walletItem) usedIds.add(walletItem.id);
+
+    const footwearItem = pickMatchingProduct(FOOTWEAR_CATS, usedIds);
+    if (footwearItem) usedIds.add(footwearItem.id);
+
+    const s1 = document.getElementById('comboItem1');
+    const s2 = document.getElementById('comboItem2');
+    const s3 = document.getElementById('comboItem3');
+
+    if (s1 && topItem) s1.value = topItem.id;
+    if (s2 && bottomItem) s2.value = bottomItem.id;
+    if (s3 && watchItem) s3.value = watchItem.id;
+
+    latestRandomSet = {
+        top: topItem || null,
+        bottom: bottomItem || null,
+        watch: watchItem || null,
+        wallet: walletItem || null,
+        footwear: footwearItem || null
+    };
 
     updateLookCard();
     calculateComboTotal();
+
+    const statusEl = document.getElementById('lookbookStatusText');
+    if (statusEl) {
+        const extraNames = [walletItem?.name, footwearItem?.name].filter(Boolean).join(" + ");
+        statusEl.innerText = extraNames
+            ? `Matched Set Ready • Extras: ${extraNames}`
+            : "Matched Set Ready";
+    }
 }
 
+function detectColorTag(text = "") {
+    const t = text.toLowerCase();
+    if (t.includes("black") || t.includes("jet") || t.includes("charcoal")) return "Black";
+    if (t.includes("white") || t.includes("off-white") || t.includes("cream")) return "White/Cream";
+    if (t.includes("ash") || t.includes("grey") || t.includes("gray")) return "Ash/Grey";
+    if (t.includes("navy")) return "Navy";
+    if (t.includes("blue") || t.includes("denim")) return "Blue/Denim";
+    if (t.includes("red") || t.includes("maroon")) return "Maroon/Red";
+    if (t.includes("green") || t.includes("olive")) return "Olive/Green";
+    if (t.includes("brown") || t.includes("tan")) return "Brown/Tan";
+    return "Classic";
+}
+
+let lastOutfitNoteText = "";
+
+function pickFromPool(pool, seedNum = 0) {
+    if (!Array.isArray(pool) || pool.length === 0) return "";
+    const idx = Math.abs(seedNum + Math.floor(Math.random() * pool.length * 7)) % pool.length;
+    return pool[idx];
+}
+
+function buildFriendlyOutfitTalk(items, extraSet) {
+    const mainList = Array.isArray(items) ? items : [];
+    const extras = [extraSet?.wallet, extraSet?.footwear].filter(Boolean);
+    const allPieces = [...mainList, ...extras];
+
+    if (allPieces.length === 0) {
+        return "আগে কম্বো থেকে কিছু আইটেম সিলেক্ট কর বা Random Look চাপ—তাহলে দারুণ একটা স্টাইলিং আইডিয়া বলে দিচ্ছি।";
+    }
+
+    const totalTk = allPieces.reduce((sum, item) => sum + Number(item.price || 0), 0);
+    const describedPieces = allPieces.map(item => {
+        const clr = detectColorTag(`${item.name} ${item.category}`);
+        return `<strong>${item.name}</strong> (${clr}, ৳${item.price})`;
+    });
+
+    const topPiece = allPieces.find(i => TOP_CATS.some(c => (i.category || "").toLowerCase().includes(c)));
+    const bottomPiece = allPieces.find(i => BOTTOM_CATS.some(c => (i.category || "").toLowerCase().includes(c)));
+    const watchPiece = allPieces.find(i => WATCH_CATS.some(c => (i.category || "").toLowerCase().includes(c)));
+    const walletPiece = allPieces.find(i => WALLET_CATS.some(c => (i.category || "").toLowerCase().includes(c)));
+    const shoePiece = allPieces.find(i => FOOTWEAR_CATS.some(c => (i.category || "").toLowerCase().includes(c)));
+
+    const seed = allPieces.reduce((acc, p, idx) => acc + Number(p.id || 0) + (idx + 1) * 13, Date.now() % 1000);
+
+    const introTitles = [
+        "এই লুকটা কেন ভালো মানাবে?",
+        "আজকের আউটফিট ভাইব চেক:",
+        "এই কম্বিনেশনটা নিয়ে যা ভাবছি:",
+        "স্টাইলিং নোট — এই সেটটা কেমন যাবে?",
+        "কম্বো রিভিউ — একনজরে লুকটা:"
+    ];
+
+    const topBottomPool = topPiece && bottomPiece ? [
+        `<strong>${topPiece.name}</strong> আর <strong>${bottomPiece.name}</strong> একসাথে বেশ ক্লিন ও ন্যাচারাল ব্যালেন্স তৈরি করে—ক্যাম্পাস, আড্ডা বা বিকেলে বের হওয়ার জন্য একদম মানানসই।`,
+        `<strong>${bottomPiece.name}</strong>-এর সাথে <strong>${topPiece.name}</strong> বেশ স্মার্ট ও ক্যাজুয়াল একটা আমেজ দেয়, খুব বেশি ফর্মালও না আবার ঢিলেঢালাও না।`,
+        `হালকা বা ফ্রেশ একটা আউটফিটের জন্য <strong>${topPiece.name}</strong> এবং <strong>${bottomPiece.name}</strong> দারুণ কাজ করে—বাইরে ঘোরাঘুরি বা বন্ধুদের সাথে মিলনমেলায় সহজেই ক্যারি করা যাবে।`,
+        `<strong>${topPiece.name}</strong>-এর কাট আর <strong>${bottomPiece.name}</strong>-এর ফিট মিলে একটা গোছানো সিলুয়েট আসে, যা প্রতিদিনের ব্যবহারে বেশ আরামদায়ক হবে।`,
+        `ক্যাজুয়াল ডে-আউট বা সন্ধ্যার চায়ের আড্ডায় <strong>${topPiece.name}</strong> + <strong>${bottomPiece.name}</strong> বেশ পরিপাটি ও রুচিশীল লুক দেয়।`,
+        `ক্লাস, অফিসের ক্যাজুয়াল দিন কিংবা শপিং—সবখানেই <strong>${topPiece.name}</strong> আর <strong>${bottomPiece.name}</strong> একটা স্বাভাবিক স্মার্টনেস ধরে রাখে।`,
+        `<strong>${bottomPiece.name}</strong>-এর সাথে <strong>${topPiece.name}</strong> পেয়ার করলে লুকটা বোরিং লাগে না, বরং বেশ ফ্রেশ ও রেডি-টু-গো মনে হয়।`,
+        `খুব বেশি ঝামেলা ছাড়াই একটা গুছানো লুক চাইলে <strong>${topPiece.name}</strong>-এর সাথে <strong>${bottomPiece.name}</strong> চমৎকার পছন্দ।`,
+        `<strong>${topPiece.name}</strong> আর <strong>${bottomPiece.name}</strong>-এর এই জুটিটা দৈনন্দিন স্টাইলে একটা হালকা-পাতলা স্মার্ট টাচ যোগ করে।`,
+        `ট্রাভেল বা লং আউটিংয়ের জন্য <strong>${topPiece.name}</strong> ও <strong>${bottomPiece.name}</strong> আরাম ও লুক—দুটো দিক থেকেই বেশ ব্যালেন্সড।`
+    ] : [
+        `সিলেক্ট করা আইটেমগুলো দিয়ে একটা সিম্পল ও গোছানো সেট তৈরি হয়েছে; সাথে আরেকটা ম্যাচিং পিস যোগ করলে লুকটা আরও পূর্ণতা পাবে।`,
+        `এই আইটেমগুলোর কম্বিনেশন বেশ পরিপাটি—দৈনন্দিন ব্যবহারে আলাদা একটা ফ্রেশনেস আনবে।`
+    ];
+
+    const accFragments = [];
+    if (watchPiece) {
+        accFragments.push(pickFromPool([
+            `হাতে <strong>${watchPiece.name}</strong> লুকটাকে আরও শার্প ও গোছানো করবে`,
+            `কবজিতে <strong>${watchPiece.name}</strong> পুরো আউটফিটে একটা আলাদা স্মার্ট ফিনিশ দেবে`,
+            `<strong>${watchPiece.name}</strong> যুক্ত হওয়ায় লুকটা আরও একটু ম্যাচিউর ও পরিপাটি লাগবে`,
+            `হাতের <strong>${watchPiece.name}</strong> সিম্পল সেটটাকেও বেশ নজরকাড়া করে তুলবে`
+        ], seed + 3));
+    }
+    if (walletPiece) {
+        accFragments.push(pickFromPool([
+            `পকেটে <strong>${walletPiece.name}</strong> প্র্যাকটিক্যাল ও ক্লিন ভাইব রাখবে`,
+            `সাথে <strong>${walletPiece.name}</strong> থাকায় দৈনন্দিন প্রয়োজনে বেশ গুছানো মনে হবে`,
+            `<strong>${walletPiece.name}</strong> আউটফিটের ইউটিলিটি ও স্মার্টনেস দুটোই বাড়িয়ে দেবে`
+        ], seed + 7));
+    }
+    if (shoePiece) {
+        accFragments.push(pickFromPool([
+            `পায়ে <strong>${shoePiece.name}</strong> পুরো লুকটাকে কমফোর্টেবল ও কমপ্লিট রাখবে`,
+            `<strong>${shoePiece.name}</strong> নিচের দিকের ব্যালেন্সটা ঠিক রেখে হাঁটার আরাম নিশ্চিত করবে`,
+            `পায়ে <strong>${shoePiece.name}</strong> দিলে লুকটা আরও ক্যাজুয়াল ও স্বাচ্ছন্দ্যময় হবে`
+        ], seed + 11));
+    }
+
+    const closingPool = [
+        `মোট হিসাব (৳${totalTk}) অনুযায়ী বাজেট ও স্টাইল—দুটোই বেশ ব্যালেন্সড।`,
+        `সব মিলিয়ে ৳${totalTk} রেঞ্জে এটা একটা বেশ পরিপাটি ও ভরসাযোগ্য কম্বো।`,
+        `মোট প্রাইস ৳${totalTk}—সিম্পল, স্মার্ট ও কমফোর্টেবল লুকের জন্য দারুণ চয়েস।`,
+        `এই সেটের মোট দাম ৳${totalTk}, যা রেগুলার আউটফিটের জন্য বেশ মানানসই।`,
+        `মোট ৳${totalTk}-এ এমন একটা সেট পাওয়া যাচ্ছে যা সহজেই বিভিন্ন জায়গায় মানিয়ে যায়।`
+    ];
+
+    let finalHtml = "";
+    for (let attempt = 0; attempt < 8; attempt++) {
+        const title = pickFromPool(introTitles, seed + attempt);
+        const bodyLine = pickFromPool(topBottomPool, seed + attempt * 2);
+        const accLine = accFragments.length > 0
+            ? `<p style="margin:0 0 8px 0; line-height:1.6;">অ্যাক্সেসরিজ হিসেবে ${accFragments.join(", ")}।</p>`
+            : "";
+        const endLine = pickFromPool(closingPool, seed + attempt * 3);
+
+        finalHtml = [
+            `<div style="font-size:15px; font-weight:700; color:#0f172a; margin-bottom:8px;">${title}</div>`,
+            `<p style="margin:0 0 8px 0; line-height:1.6;">এই সেটে আছে: ${describedPieces.join(" + ")}।</p>`,
+            `<p style="margin:0 0 8px 0; line-height:1.6;">${bodyLine}</p>`,
+            accLine,
+            `<p style="margin:0; font-weight:600; color:#1d4ed8;">${endLine}</p>`
+        ].join("");
+
+        if (finalHtml !== lastOutfitNoteText) {
+            break;
+        }
+    }
+
+    lastOutfitNoteText = finalHtml;
+    return finalHtml;
+}
+
+function generateCombinedOutfitPreview() {
+    const ids = [
+        Number(document.getElementById('comboItem1')?.value),
+        Number(document.getElementById('comboItem2')?.value),
+        Number(document.getElementById('comboItem3')?.value)
+    ];
+
+    const selectedItems = ids
+        .map(id => products.find(p => p.id === id))
+        .filter(Boolean);
+
+    const statusEl = document.getElementById('combinedLookStatus');
+    const imgEl = document.getElementById('combinedLookImg');
+    const noteEl = document.getElementById('stylistNoteBox');
+
+    if (imgEl) {
+        imgEl.removeAttribute('src');
+        imgEl.style.display = "none";
+    }
+
+    if (selectedItems.length === 0 && !latestRandomSet) {
+        if (statusEl) statusEl.innerText = "আগে Random Look চাপ বা আইটেম সিলেক্ট কর।";
+        if (noteEl) {
+            noteEl.innerHTML = "একটা শার্ট/টি-শার্ট/পোলো/পাঞ্জাবি + প্যান্ট + ওয়াচ + ওয়ালেট + স্যান্ডেল/লোফার্সের কম্বিনেশন নিয়ে কথা বলে দিচ্ছি।";
+            noteEl.style.display = "block";
+        }
+        return;
+    }
+
+    const talkHtml = buildFriendlyOutfitTalk(selectedItems, latestRandomSet);
+
+    if (noteEl) {
+        noteEl.innerHTML = talkHtml;
+        noteEl.style.display = "block";
+    }
+
+    if (statusEl) {
+        statusEl.innerText = "Style suggestion ready.";
+    }
+}
 
 function calculateComboTotal() {
     const id1 = Number(document.getElementById('comboItem1')?.value);
@@ -702,6 +945,7 @@ function handleReviewSubmit(e) {
     });
 }
 
+// প্রতিবার Track Now চাপলে স্টোরেজ থেকে ফ্রেশ অর্ডার স্ট্যাটাস পড়ে দেখায় (পেজ রিফ্রেশ ছাড়াই)
 function handleTrackOrder() {
     orders = readOrdersFromStorage();
     const phone = (document.getElementById('trackPhoneInput')?.value || "").trim();
@@ -953,7 +1197,7 @@ function verifyAdminPin() {
         closeModal('adminPassModal');
         openModal('adminPanelModal');
         injectAddProductSizePicker();
-        bindAddProductFormDirectly();
+        forceFixSaveProductButton();
         renderAdminProductList();
         renderAdminBannerList();
         renderAdminOrdersList();
@@ -972,7 +1216,7 @@ function switchAdminTab(tabId, ev) {
     if (ev && ev.target) ev.target.classList.add('active');
     if (tabId === 'addProduct') {
         injectAddProductSizePicker();
-        bindAddProductFormDirectly();
+        forceFixSaveProductButton();
     }
 }
 
@@ -1067,9 +1311,9 @@ async function uploadImageSmart(fileInput, maxWidth, maxHeight, quality) {
 
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onload = function(e) {
+        reader.onload = function (e) {
             const img = new Image();
-            img.onload = function() {
+            img.onload = function () {
                 let width = img.width;
                 let height = img.height;
 
@@ -1609,40 +1853,3 @@ function handleRemoveLogo() {
     renderLogo();
     alert("Logo removed.");
 }
-
-function forceFixSaveProductButton() {
-    const pSizeEl = document.getElementById('pSize');
-    if (pSizeEl) {
-        pSizeEl.required = false;
-        pSizeEl.removeAttribute('required');
-        pSizeEl.style.display = 'none';
-    }
-
-    const formEl =
-        document.getElementById('pName')?.closest('form') ||
-        document.querySelector('#adminAddProduct form');
-
-    if (formEl) {
-        formEl.setAttribute('novalidate', 'true');
-        formEl.onsubmit = function(ev) {
-            ev.preventDefault();
-            handleAddProduct(ev);
-            return false;
-        };
-    }
-
-    const allButtons = Array.from(document.querySelectorAll('button'));
-    const saveBtn = allButtons.find(b => (b.innerText || '').trim().toLowerCase() === 'save product');
-    if (saveBtn) {
-        saveBtn.type = 'button';
-        saveBtn.onclick = function(ev) {
-            ev.preventDefault();
-            handleAddProduct(ev);
-        };
-    }
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-    forceFixSaveProductButton();
-    setInterval(forceFixSaveProductButton, 1500);
-});
